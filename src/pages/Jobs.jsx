@@ -60,7 +60,7 @@ const Jobs = () => {
       job.jobTitle.toLowerCase().includes(query) ||
       job.companyId?.name?.toLowerCase().includes(query) ||
       job.location.toLowerCase().includes(query) ||
-      (job.requiredSkills || []).some((s) => s.toLowerCase().includes(query));
+      (job.requiredSkills || []).some((s) => s?.toLowerCase().includes(query));
     const matchType = filterType === 'all' || job.jobType === filterType;
     const matchVerified = !filterVerified || job.companyId?.verificationStatus === 'verified';
     return matchSearch && matchType && matchVerified;

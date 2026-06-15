@@ -172,7 +172,7 @@ const ProfessionalFeed = () => {
               <p className="text-sm mt-1">Be the first to share a post!</p>
             </div>
           ) : posts.map(post => {
-            const isLiked = post.likes.includes(user._id);
+            const isLiked = post.likes?.includes(user._id);
             const isCompanyPost = post.userId?.accountType === 'company';
             return (
               <div key={post._id} className="glassmorphism p-5 rounded-2xl space-y-4">
@@ -202,10 +202,10 @@ const ProfessionalFeed = () => {
                   </div>
                   {post.userId?._id !== user._id && (
                     <button
-                      onClick={() => handleFollowChange(post.userId?._id, user.following.includes(post.userId?._id))}
-                      className="text-xs text-brand-purple hover:text-brand-accent transition-colors"
+                      onClick={() => handleFollowChange(post.userId?._id, user.following?.includes(post.userId?._id))}
+                      className="px-3 py-1.5 rounded-lg border border-brand-purple/40 text-[10px] font-bold text-brand-accent hover:bg-brand-purple hover:text-white transition-colors"
                     >
-                      {user.following.includes(post.userId?._id) ? 'Following' : '+ Follow'}
+                      {user.following?.includes(post.userId?._id) ? 'Following' : '+ Follow'}
                     </button>
                   )}
                 </div>
@@ -261,7 +261,7 @@ const ProfessionalFeed = () => {
                 .filter(u => u.accountType === 'professional' && u._id !== user._id)
                 .slice(0, 4)
                 .map(recUser => {
-                  const isFollowing = user.following.includes(recUser._id);
+                  const isFollowing = user.following?.includes(recUser._id);
                   return (
                     <div key={recUser._id} className="flex items-center justify-between text-xs py-2 border-b border-brand-medium/30 last:border-0">
                       <div className="flex items-center space-x-2">
@@ -302,7 +302,7 @@ const ProfessionalFeed = () => {
                 .filter(u => u.accountType === 'company')
                 .slice(0, 4)
                 .map(company => {
-                  const isFollowing = user.following.includes(company._id);
+                  const isFollowing = user.following?.includes(company._id);
                   return (
                     <div key={company._id} className="flex items-center justify-between text-xs py-2 border-b border-brand-medium/30 last:border-0">
                       <div className="flex items-center space-x-2 min-w-0">
