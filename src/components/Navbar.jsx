@@ -5,6 +5,7 @@ import api from '../services/api';
 import {
   FaBriefcase, FaUser, FaHome, FaSignOutAlt, FaClipboardList,
   FaBell, FaShieldAlt, FaCheckCircle, FaClock, FaCalendarAlt,
+  FaBuilding,
 } from 'react-icons/fa';
 import { MdAdminPanelSettings } from 'react-icons/md';
 
