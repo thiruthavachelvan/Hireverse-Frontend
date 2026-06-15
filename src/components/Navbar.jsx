@@ -121,6 +121,10 @@ const Navbar = () => {
                     <FaHome className="text-brand-purple" />
                     <span className="hidden sm:inline">Feed</span>
                   </Link>
+                  <Link to="/companies" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
+                    <FaBuilding className="text-brand-purple" />
+                    <span className="hidden sm:inline">Companies</span>
+                  </Link>
                   <Link to="/jobs" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
                     <FaBriefcase className="text-brand-purple" />
                     <span className="hidden sm:inline">Jobs</span>

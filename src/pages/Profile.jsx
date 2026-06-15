@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { 
   FaUserEdit, FaSave, FaTimes, FaListUl, FaInfoCircle, 
-  FaBriefcase, FaGraduationCap, FaCertificate, FaPlus, FaTrash 
+  FaBriefcase, FaGraduationCap, FaCertificate, FaPlus, FaTrash,
+  FaFilePdf, FaFileUpload, FaCheck, FaUserFriends
 } from 'react-icons/fa';
 
 const Profile = () => {
@@ -29,6 +30,131 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // New features state
+  const [activeTab, setActiveTab] = useState('experience'); // 'experience', 'posts', 'requests'
+  const [userPosts, setUserPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [followRequests, setFollowRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [resumeUploading, setResumeUploading] = useState(false);
+
+  const fetchUserPosts = async () => {
+    setPostsLoading(true);
+    try {
+      const { data } = await api.get(`/posts/user/${user._id}`);
+      setUserPosts(data);
+    } catch (err) {
+      console.error('Failed to load user posts');
+    }
+    setPostsLoading(false);
+  };
+
+  const fetchFollowRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      const { data } = await api.get('/auth/follow-requests');
+      setFollowRequests(data);
+    } catch (err) {
+      console.error('Failed to load follow requests');
+    }
+    setRequestsLoading(false);
+  };
+
+  const handleAcceptRequest = async (reqId) => {
+    try {
+      setError('');
+      setSuccess('');
+      await api.put(`/auth/follow-request/${reqId}/accept`);
+      setSuccess('Connection request accepted!');
+      fetchFollowRequests();
+      fetchDetailedProfile();
+    } catch {
+      setError('Failed to accept request.');
+    }
+  };
+
+  const handleRejectRequest = async (reqId) => {
+    try {
+      setError('');
+      setSuccess('');
+      await api.put(`/auth/follow-request/${reqId}/reject`);
+      setSuccess('Connection request rejected.');
+      fetchFollowRequests();
+    } catch {
+      setError('Failed to reject request.');
+    }
+  };
+
+  const handleResumeUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setError('Only PDF resumes are supported.');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB Limit
+      setError('Resume must be under 2MB.');
+      return;
+    }
+
+    setResumeUploading(true);
+    setError('');
+    setSuccess('');
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result;
+        const res = await updateProfile({
+          resume: {
+            name: file.name,
+            data: base64Data,
+            contentType: file.type
+          }
+        });
+        if (res.success) {
+          setSuccess('Resume uploaded successfully!');
+        } else {
+          setError(res.message);
+        }
+      } catch (err) {
+        setError('Resume upload failed.');
+      }
+      setResumeUploading(false);
+    };
+  };
+
+  const handleDeleteResume = async () => {
+    try {
+      setError('');
+      setSuccess('');
+      setResumeUploading(true);
+      const res = await updateProfile({
+        resume: { name: '', data: '', contentType: '' }
+      });
+      if (res.success) {
+        setSuccess('Resume removed.');
+      } else {
+        setError(res.message);
+      }
+    } catch {
+      setError('Failed to remove resume.');
+    }
+    setResumeUploading(false);
+  };
+
+  const handleDownloadResume = () => {
+    if (user.resume && user.resume.data) {
+      const link = document.createElement('a');
+      link.href = user.resume.data;
+      link.download = user.resume.name || 'resume.pdf';
+      link.click();
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -43,6 +169,10 @@ const Profile = () => {
       });
       setWorkExperience(user.workExperience || []);
       fetchDetailedProfile();
+      if (user.accountType === 'professional') {
+        fetchUserPosts();
+        fetchFollowRequests();
+      }
     }
   }, [user]);
 
@@ -485,47 +615,207 @@ const Profile = () => {
                   )}
                 </div>
               )}
-            </div>
 
-            {/* Right: Experience or Connections depending on user type */}
-            <div className="glassmorphism p-6 rounded-2xl md:col-span-2 space-y-6">
-              
-              {/* Work Experience Timeline */}
+              {/* Resume */}
               {isProfessional && (
-                <div>
-                  <h3 className="text-md font-bold mb-4 flex items-center space-x-2">
-                    <FaBriefcase className="text-brand-purple" />
-                    <span>Work Experience</span>
+                <div className="border-t border-brand-medium/40 pt-4 space-y-3">
+                  <h3 className="text-md font-bold mb-2 flex items-center space-x-2">
+                    <FaFilePdf className="text-brand-purple" />
+                    <span>Resume</span>
                   </h3>
-                  {user.workExperience && user.workExperience.length > 0 ? (
-                    <div className="relative border-l border-brand-medium/60 ml-2.5 pl-6 space-y-6">
-                      {user.workExperience.map((exp, index) => (
-                        <div key={index} className="relative">
-                          {/* Dot marker */}
-                          <span className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full bg-brand-purple border-2 border-brand-dark" />
-                          <div>
-                            <h4 className="font-bold text-white text-sm">{exp.role}</h4>
-                            <p className="text-xs text-brand-accent mt-0.5">{exp.company}</p>
-                            <p className="text-[10px] text-gray-500 mt-1">
-                              {exp.from} — {exp.to || 'Present'}
-                            </p>
-                            {exp.description && (
-                              <p className="text-xs text-gray-300 mt-2 leading-relaxed whitespace-pre-wrap">{exp.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                  {user.resume?.name ? (
+                    <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col gap-2">
+                      <div className="flex items-center gap-2 truncate">
+                        <FaFilePdf className="text-red-400 shrink-0 w-4 h-4" />
+                        <span className="text-xs font-semibold text-gray-200 truncate flex-1">{user.resume.name}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleDownloadResume}
+                          className="flex-1 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded-lg text-[10px] font-bold transition-all"
+                        >
+                          View/Download
+                        </button>
+                        <button
+                          onClick={handleDeleteResume}
+                          className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-[10px] font-bold transition-all"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400">No work experience listed yet.</p>
+                    <div className="border border-dashed border-brand-medium/60 rounded-xl p-4 text-center cursor-pointer hover:border-violet-500/40 transition-colors relative">
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleResumeUpload}
+                        disabled={resumeUploading}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <FaFileUpload className="text-gray-500 mx-auto w-6 h-6 mb-2" />
+                      <p className="text-[10px] text-gray-400 font-semibold">
+                        {resumeUploading ? 'Uploading...' : 'Upload PDF Resume (Max 2MB)'}
+                      </p>
+                    </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* Right: Experience, Posts, Requests or Connections */}
+            <div className="glassmorphism p-6 rounded-2xl md:col-span-2 space-y-6">
+              
+              {isProfessional ? (
+                <div className="space-y-6">
+                  {/* Tab Navigation */}
+                  <div className="flex border-b border-brand-medium/40">
+                    <button
+                      onClick={() => setActiveTab('experience')}
+                      className={`flex-1 pb-3 text-xs font-bold transition-colors border-b-2 text-center ${
+                        activeTab === 'experience'
+                          ? 'border-brand-purple text-white'
+                          : 'border-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      Experience
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab('posts'); fetchUserPosts(); }}
+                      className={`flex-1 pb-3 text-xs font-bold transition-colors border-b-2 text-center ${
+                        activeTab === 'posts'
+                          ? 'border-brand-purple text-white'
+                          : 'border-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      My Posts ({userPosts.length})
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab('requests'); fetchFollowRequests(); }}
+                      className={`flex-1 pb-3 text-xs font-bold transition-colors border-b-2 text-center relative ${
+                        activeTab === 'requests'
+                          ? 'border-brand-purple text-white'
+                          : 'border-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      Requests
+                      {followRequests.length > 0 && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold">
+                          {followRequests.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Tab Panels */}
+                  {activeTab === 'experience' && (
+                    <div>
+                      {user.workExperience && user.workExperience.length > 0 ? (
+                        <div className="relative border-l border-brand-medium/60 ml-2.5 pl-6 space-y-6">
+                          {user.workExperience.map((exp, index) => (
+                            <div key={index} className="relative">
+                              <span className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full bg-brand-purple border-2 border-brand-dark" />
+                              <div>
+                                <h4 className="font-bold text-white text-sm">{exp.role}</h4>
+                                <p className="text-xs text-brand-accent mt-0.5">{exp.company}</p>
+                                <p className="text-[10px] text-gray-500 mt-1">
+                                  {exp.from} — {exp.to || 'Present'}
+                                </p>
+                                {exp.description && (
+                                  <p className="text-xs text-gray-300 mt-2 leading-relaxed whitespace-pre-wrap">{exp.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400">No work experience listed yet.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'posts' && (
+                    <div className="space-y-4">
+                      {postsLoading ? (
+                        <div className="text-center py-6 text-gray-500 text-sm">Loading posts...</div>
+                      ) : userPosts.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic text-center py-6">You haven't posted anything yet.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {userPosts.map(post => (
+                            <div key={post._id} className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
+                              <p className="text-xs text-gray-200 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+                              <div className="flex justify-between items-center text-[10px] text-gray-500 pt-2 border-t border-white/5">
+                                <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                                <div className="flex gap-3">
+                                  <span>{post.likes?.length || 0} Likes</span>
+                                  <span>{post.comments?.length || 0} Comments</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'requests' && (
+                    <div className="space-y-4">
+                      {requestsLoading ? (
+                        <div className="text-center py-6 text-gray-500 text-sm">Loading requests...</div>
+                      ) : followRequests.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic text-center py-6">No pending connection requests.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {followRequests.map(req => (
+                            <div key={req._id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <img
+                                  src={req.senderId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${req.senderId?.name}`}
+                                  alt=""
+                                  className="w-10 h-10 rounded-full border border-brand-purple bg-brand-medium"
+                                />
+                                <div className="min-w-0">
+                                  <h4 className="text-xs font-bold text-white truncate">{req.senderId?.name}</h4>
+                                  <p className="text-[10px] text-gray-400 truncate">{req.senderId?.headline || 'Professional'}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 shrink-0">
+                                <button
+                                  onClick={() => handleAcceptRequest(req._id)}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                >
+                                  <FaCheck /> Accept
+                                </button>
+                                <button
+                                  onClick={() => handleRejectRequest(req._id)}
+                                  className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"
+                                >
+                                  <FaTimes /> Reject
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Company View
+                <div>
+                  <h3 className="text-md font-bold mb-4 flex items-center space-x-2">
+                    <FaBuilding className="text-brand-purple" />
+                    <span>Company Overview</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 italic">Explore your network contacts below.</p>
                 </div>
               )}
 
               {/* Connections (For all types) */}
               <div className={isProfessional ? "border-t border-brand-medium/40 pt-6" : ""}>
                 <h3 className="text-md font-bold mb-4 flex items-center space-x-2">
-                  <FaInfoCircle className="text-brand-purple" />
+                  <FaUserFriends className="text-brand-purple" />
                   <span>Network Contacts</span>
                 </h3>
                 

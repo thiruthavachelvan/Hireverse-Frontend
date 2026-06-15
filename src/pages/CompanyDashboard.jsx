@@ -5,7 +5,7 @@ import {
   FaBriefcase, FaPlusCircle, FaMapMarkerAlt, FaDollarSign,
   FaLayerGroup, FaPlus, FaTrash, FaCalendarAlt, FaCheckCircle,
   FaTimesCircle, FaChevronDown, FaChevronUp, FaClipboardList,
-  FaTrophy, FaHourglassHalf, FaToggleOn, FaToggleOff
+  FaTrophy, FaHourglassHalf, FaToggleOn, FaToggleOff, FaFilePdf, FaBullhorn
 } from 'react-icons/fa';
 import { MdVerified } from 'react-icons/md';
 
@@ -131,6 +131,23 @@ const ApplicantCard = ({ app, job, onAction }) => {
               )}
             </div>
           </div>
+
+          {/* Resume PDF */}
+          {app.applicantId?.resume?.data && (
+            <div className="bg-white/3 rounded-xl p-3 flex justify-between items-center">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Resume</p>
+                <p className="text-sm text-gray-300 font-medium">{app.applicantId.resume.name || 'resume.pdf'}</p>
+              </div>
+              <a
+                href={app.applicantId.resume.data}
+                download={app.applicantId.resume.name || 'resume.pdf'}
+                className="px-3 py-1.5 bg-brand-purple/20 hover:bg-brand-purple/40 text-brand-accent text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+              >
+                <FaFilePdf /> View / Download
+              </a>
+            </div>
+          )}
 
           {/* Form Answers */}
           {app.formAnswers?.length > 0 && (
@@ -301,7 +318,11 @@ const CompanyDashboard = () => {
     salary: '',
     location: '',
     jobType: 'Full-time',
+    shareToFeed: true,
   });
+  const [hiringInfo, setHiringInfo] = useState(user?.companyDetails?.upcomingHiring || '');
+  const [updatingHiringInfo, setUpdatingHiringInfo] = useState(false);
+  const [hiringToast, setHiringToast] = useState('');
   const [rounds, setRounds] = useState([{ name: '' }]);
   const [formQuestions, setFormQuestions] = useState([{ question: '', required: true }]);
   const [activeJobId, setActiveJobId] = useState(null);
@@ -356,13 +377,27 @@ const CompanyDashboard = () => {
         applicationForm: validQuestions,
       });
       setJobs([res.data, ...jobs]);
-      setJobForm({ jobTitle: '', description: '', requiredSkills: '', salary: '', location: '', jobType: 'Full-time' });
+      setJobForm({ jobTitle: '', description: '', requiredSkills: '', salary: '', location: '', jobType: 'Full-time', shareToFeed: true });
       setRounds([{ name: '' }]);
       setFormQuestions([{ question: '', required: true }]);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create job.');
     }
     setActionLoading(false);
+  };
+
+  const handleUpdateHiringInfo = async (e) => {
+    e.preventDefault();
+    setUpdatingHiringInfo(true);
+    try {
+      await api.put('/auth/profile', { companyDetails: { upcomingHiring: hiringInfo } });
+      setHiringToast('✓ Updated');
+      setTimeout(() => setHiringToast(''), 3000);
+    } catch {
+      setHiringToast('Update failed');
+      setTimeout(() => setHiringToast(''), 3000);
+    }
+    setUpdatingHiringInfo(false);
   };
 
   const fetchJobApplicants = async (job) => {
@@ -424,6 +459,31 @@ const CompanyDashboard = () => {
               <MdVerified /><span>Your company is <strong>HireVerse Verified</strong>!</span>
             </div>
           )}
+
+          <div className="glassmorphism p-6 rounded-2xl">
+            <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+              <FaBullhorn className="text-brand-purple" /><span>Upcoming Hiring Info</span>
+            </h2>
+            <form onSubmit={handleUpdateHiringInfo} className="space-y-3">
+              <p className="text-xs text-gray-400">Share your company's upcoming hiring plans, off-campus drives, or general recruitment schedules. Candidates visiting your profile will see this.</p>
+              <textarea
+                value={hiringInfo}
+                onChange={e => setHiringInfo(e.target.value)}
+                placeholder="e.g. We are planning an off-campus drive for 2025 graduates in December..."
+                className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple min-h-[80px] resize-none"
+              />
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={updatingHiringInfo}
+                  className="px-4 py-2 bg-brand-purple hover:bg-opacity-95 font-semibold text-xs rounded-xl transition-all disabled:opacity-50"
+                >
+                  {updatingHiringInfo ? 'Saving...' : 'Save Info'}
+                </button>
+                {hiringToast && <span className={`text-xs font-medium ${hiringToast.includes('✓') ? 'text-emerald-400' : 'text-red-400'}`}>{hiringToast}</span>}
+              </div>
+            </form>
+          </div>
 
           <div className="glassmorphism p-6 rounded-2xl">
             <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
@@ -547,6 +607,16 @@ const CompanyDashboard = () => {
                     ))}
                   </div>
                 </div>
+
+                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={jobForm.shareToFeed}
+                    onChange={e => setJobForm({ ...jobForm, shareToFeed: e.target.checked })}
+                    className="accent-brand-purple w-4 h-4"
+                  />
+                  Share job to feed and notify followers
+                </label>
 
                 <button
                   type="submit"
