@@ -1,0 +1,654 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import {
+  FaBriefcase, FaPlusCircle, FaMapMarkerAlt, FaDollarSign,
+  FaLayerGroup, FaPlus, FaTrash, FaCalendarAlt, FaCheckCircle,
+  FaTimesCircle, FaChevronDown, FaChevronUp, FaClipboardList,
+  FaTrophy, FaHourglassHalf, FaToggleOn, FaToggleOff
+} from 'react-icons/fa';
+import { MdVerified } from 'react-icons/md';
+
+// ─── Status chip for applicants ─────────────────────────────────────────────
+const StatusChip = ({ status }) => {
+  const cfg = {
+    submitted:    { cls: 'bg-blue-500/20 text-blue-400 border-blue-500/30', label: 'Submitted' },
+    under_review: { cls: 'bg-amber-500/20 text-amber-400 border-amber-500/30', label: 'Under Review' },
+    in_round:     { cls: 'bg-violet-500/20 text-violet-400 border-violet-500/30', label: 'In Round' },
+    hired:        { cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', label: 'Hired' },
+    rejected:     { cls: 'bg-red-500/20 text-red-400 border-red-500/30', label: 'Not Selected' },
+  }[status] || { cls: 'bg-gray-500/20 text-gray-400 border-gray-500/30', label: status };
+  return (
+    <span className={`text-xs font-medium border px-2.5 py-1 rounded-full ${cfg.cls}`}>{cfg.label}</span>
+  );
+};
+
+// ─── Applicant Card (company view) ──────────────────────────────────────────
+const ApplicantCard = ({ app, job, onAction }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduleData, setScheduleData] = useState({
+    roundNumber: app.currentRound || 1,
+    scheduledAt: '',
+    venue: '',
+    notes: '',
+  });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const doAction = async (endpoint, body = {}) => {
+    setActionLoading(true);
+    try {
+      const { data } = await api.put(`/applications/${app._id}/${endpoint}`, body);
+      onAction(app._id, data.application);
+      if (toast) setToast('');
+      setToast('✓ Done');
+      setTimeout(() => setToast(''), 2000);
+    } catch (err) {
+      setToast(err.response?.data?.message || 'Action failed');
+    }
+    setActionLoading(false);
+  };
+
+  const handleSchedule = async (e) => {
+    e.preventDefault();
+    if (!scheduleData.scheduledAt) return;
+    await doAction('schedule-round', scheduleData);
+    setShowScheduler(false);
+  };
+
+  const totalRounds = job?.rounds?.length || 0;
+  const isInRound = app.status === 'in_round';
+  const isHired = app.status === 'hired';
+  const isRejected = app.status === 'rejected';
+  const isSubmitted = app.status === 'submitted';
+  const canAdvance = isInRound && app.currentRound < totalRounds;
+  const canHire = isInRound && app.currentRound === totalRounds;
+
+  return (
+    <div className={`bg-brand-medium/20 border rounded-2xl overflow-hidden transition-all ${
+      isHired ? 'border-emerald-500/30' : isRejected ? 'border-red-500/10 opacity-60' : 'border-white/5'
+    }`}>
+      {/* Header row */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
+        <img
+          src={app.applicantId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${app.applicantId?.name}`}
+          alt={app.applicantId?.name}
+          className="w-10 h-10 rounded-full border border-brand-purple bg-brand-medium flex-shrink-0"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm text-white">{app.applicantId?.name}</p>
+          <p className="text-gray-400 text-xs">{app.applicantId?.headline || app.applicantId?.email}</p>
+          {app.applicantId?.skills?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {app.applicantId.skills.slice(0, 4).map(s => (
+                <span key={s} className="text-[9px] bg-brand-medium px-1.5 py-0.5 rounded text-gray-300">{s}</span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <StatusChip status={app.status} />
+          {isInRound && (
+            <span className="text-xs text-violet-300">
+              {job?.rounds?.find(r => r.roundNumber === app.currentRound)?.name || `Round ${app.currentRound}`}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="text-gray-500 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+        >
+          {expanded ? <FaChevronUp /> : <FaChevronDown />}
+        </button>
+      </div>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-4 pb-4 space-y-4 border-t border-white/5 pt-4">
+          {/* Candidate Profile Details */}
+          <div className="bg-white/3 rounded-xl p-3 space-y-2">
+            <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Candidate Profile</p>
+            <div className="text-xs space-y-1">
+              {app.applicantId?.employmentStatus && (
+                <p className="text-gray-300">
+                  <span className="font-semibold text-gray-400">Employment Status:</span>{' '}
+                  <span className="capitalize">{app.applicantId.employmentStatus.replace('_', ' ')}</span>
+                </p>
+              )}
+              {app.applicantId?.education && (
+                <div>
+                  <p className="text-gray-300">
+                    <span className="font-semibold text-gray-400">Education:</span>{' '}
+                    {app.applicantId.education.college || 'N/A'} (CGPA: {app.applicantId.education.cgpa || 'N/A'})
+                  </p>
+                  {app.applicantId.education.certifications?.length > 0 && (
+                    <p className="text-gray-400 text-[10px]">
+                      Certifications: {app.applicantId.education.certifications.join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Form Answers */}
+          {app.formAnswers?.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-2">Application Answers</p>
+              <div className="space-y-3">
+                {app.formAnswers.map((fa, idx) => (
+                  <div key={idx} className="bg-white/3 rounded-xl p-3">
+                    <p className="text-gray-300 text-xs font-medium mb-1">Q: {fa.question}</p>
+                    <p className="text-white text-sm leading-relaxed">{fa.answer || <em className="text-gray-500">No answer</em>}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Round Schedules */}
+          {app.roundSchedules?.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-2">Round Schedules</p>
+              <div className="space-y-2">
+                {app.roundSchedules.map((rs, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs bg-violet-500/10 border border-violet-500/20 rounded-lg px-3 py-2">
+                    <FaCalendarAlt className="text-violet-400 flex-shrink-0" />
+                    <span className="text-violet-300 font-medium">{rs.roundName}:</span>
+                    <span className="text-gray-300">
+                      {new Date(rs.scheduledAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
+                    {rs.venue && <span className="text-gray-400">· {rs.venue}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Toast */}
+          {toast && <p className={`text-xs font-medium ${toast.startsWith('✓') ? 'text-emerald-400' : 'text-red-400'}`}>{toast}</p>}
+
+          {/* Actions */}
+          {!isRejected && !isHired && (
+            <div className="flex flex-wrap gap-2">
+              {/* Accept (for submitted apps) */}
+              {isSubmitted && (
+                <button
+                  onClick={() => doAction('accept')}
+                  disabled={actionLoading}
+                  className="px-3 py-1.5 bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <FaCheckCircle /> Accept to Round 1
+                </button>
+              )}
+
+              {/* Schedule Round */}
+              {isInRound && (
+                <button
+                  onClick={() => setShowScheduler(v => !v)}
+                  className="px-3 py-1.5 bg-violet-600/80 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <FaCalendarAlt /> Schedule Round
+                </button>
+              )}
+
+              {/* Advance to next round */}
+              {canAdvance && (
+                <button
+                  onClick={() => doAction('advance')}
+                  disabled={actionLoading}
+                  className="px-3 py-1.5 bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <FaLayerGroup /> Advance to Next Round
+                </button>
+              )}
+
+              {/* Mark Hired */}
+              {canHire && (
+                <button
+                  onClick={() => doAction('hire')}
+                  disabled={actionLoading}
+                  className="px-3 py-1.5 bg-amber-500/80 hover:bg-amber-400 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <FaTrophy /> Mark as Hired
+                </button>
+              )}
+
+              {/* Reject */}
+              <button
+                onClick={() => doAction('reject')}
+                disabled={actionLoading}
+                className="px-3 py-1.5 bg-red-600/50 hover:bg-red-600 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <FaTimesCircle /> Reject
+              </button>
+            </div>
+          )}
+
+          {/* Schedule Round Form */}
+          {showScheduler && (
+            <form onSubmit={handleSchedule} className="bg-white/3 rounded-xl p-4 space-y-3 border border-white/10">
+              <p className="text-sm font-semibold text-white">Schedule a Round</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Round</label>
+                  <select
+                    value={scheduleData.roundNumber}
+                    onChange={e => setScheduleData(p => ({ ...p, roundNumber: Number(e.target.value) }))}
+                    className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                  >
+                    {(job?.rounds || []).map(r => (
+                      <option key={r.roundNumber} value={r.roundNumber}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Date & Time *</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={scheduleData.scheduledAt}
+                    onChange={e => setScheduleData(p => ({ ...p, scheduledAt: e.target.value }))}
+                    className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Venue / Link</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Office Room 3 / Google Meet link"
+                  value={scheduleData.venue}
+                  onChange={e => setScheduleData(p => ({ ...p, venue: e.target.value }))}
+                  className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Notes for candidate</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Bring your portfolio, prepare for 30 min discussion"
+                  value={scheduleData.notes}
+                  onChange={e => setScheduleData(p => ({ ...p, notes: e.target.value }))}
+                  className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button type="submit" disabled={actionLoading} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
+                  {actionLoading ? 'Saving...' : 'Send Schedule Notification'}
+                </button>
+                <button type="button" onClick={() => setShowScheduler(false)} className="px-4 py-2 text-gray-400 hover:text-white text-xs rounded-lg hover:bg-white/5 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Company Dashboard ───────────────────────────────────────────────────────
+const CompanyDashboard = () => {
+  const { user } = useAuth();
+  const [jobs, setJobs] = useState([]);
+  const [jobForm, setJobForm] = useState({
+    jobTitle: '',
+    description: '',
+    requiredSkills: '',
+    salary: '',
+    location: '',
+    jobType: 'Full-time',
+  });
+  const [rounds, setRounds] = useState([{ name: '' }]);
+  const [formQuestions, setFormQuestions] = useState([{ question: '', required: true }]);
+  const [activeJobId, setActiveJobId] = useState(null);
+  const [activeJob, setActiveJob] = useState(null);
+  const [applicants, setApplicants] = useState([]);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchCompanyData();
+  }, []);
+
+  const fetchCompanyData = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/jobs/company');
+      setJobs(res.data);
+    } catch { setError('Failed to load company jobs.'); }
+    setLoading(false);
+  };
+
+  const addRound = () => setRounds(r => [...r, { name: '' }]);
+  const removeRound = (idx) => setRounds(r => r.filter((_, i) => i !== idx));
+  const updateRound = (idx, val) => setRounds(r => r.map((item, i) => i === idx ? { ...item, name: val } : item));
+
+  const addQuestion = () => setFormQuestions(q => [...q, { question: '', required: true }]);
+  const removeQuestion = (idx) => setFormQuestions(q => q.filter((_, i) => i !== idx));
+  const updateQuestion = (idx, field, val) =>
+    setFormQuestions(q => q.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+
+  const handleCreateJob = async (e) => {
+    e.preventDefault();
+    if (user.verificationStatus !== 'verified') {
+      setError('Only verified companies can post jobs.');
+      return;
+    }
+    const { jobTitle, description, salary, location } = jobForm;
+    if (!jobTitle || !description || !salary || !location) {
+      setError('Please fill out all required fields.');
+      return;
+    }
+    const validRounds = rounds.filter(r => r.name.trim());
+    const validQuestions = formQuestions.filter(q => q.question.trim());
+    setActionLoading(true);
+    setError('');
+    try {
+      const res = await api.post('/jobs', {
+        ...jobForm,
+        rounds: validRounds,
+        applicationForm: validQuestions,
+      });
+      setJobs([res.data, ...jobs]);
+      setJobForm({ jobTitle: '', description: '', requiredSkills: '', salary: '', location: '', jobType: 'Full-time' });
+      setRounds([{ name: '' }]);
+      setFormQuestions([{ question: '', required: true }]);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create job.');
+    }
+    setActionLoading(false);
+  };
+
+  const fetchJobApplicants = async (job) => {
+    setActiveJobId(job._id);
+    setActiveJob(job);
+    setLoadingApplicants(true);
+    try {
+      const res = await api.get(`/applications/job/${job._id}`);
+      setApplicants(res.data);
+    } catch { setError('Failed to load job applicants.'); }
+    setLoadingApplicants(false);
+  };
+
+  const handleApplicantAction = (appId, updatedApp) => {
+    setApplicants(prev => prev.map(a => a._id === appId ? { ...a, ...updatedApp } : a));
+  };
+
+  const handleToggleActive = async (jobId) => {
+    try {
+      const res = await api.put(`/jobs/${jobId}/toggle-active`);
+      setJobs(prev => prev.map(j => j._id === jobId ? { ...j, isActive: res.data.isActive } : j));
+    } catch { /* ignore */ }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center bg-brand-dark">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-purple border-t-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-brand-dark text-white px-4 md:px-8 py-8">
+      {error && (
+        <div className="max-w-6xl mx-auto mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-center text-sm">
+          {error}
+          <button className="ml-4 underline" onClick={() => setError('')}>Dismiss</button>
+        </div>
+      )}
+
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* LEFT: Create Job Form */}
+        <div className="lg:col-span-1 space-y-6">
+          {user.verificationStatus === 'pending' && (
+            <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3 text-amber-300 text-sm flex items-start gap-2">
+              <FaHourglassHalf className="mt-0.5 flex-shrink-0" />
+              <span>Your company is <strong>pending verification</strong>. Candidates cannot see your jobs yet. You will be able to post jobs once you are approved by the administrator.</span>
+            </div>
+          )}
+          {user.verificationStatus === 'rejected' && (
+            <div className="bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3 text-red-300 text-sm flex items-start gap-2">
+              <FaTimesCircle className="mt-0.5 flex-shrink-0" />
+              <span>Your company verification has been <strong>rejected</strong>. Please contact support.</span>
+            </div>
+          )}
+          {user.verificationStatus === 'verified' && (
+            <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-4 py-3 text-emerald-300 text-sm flex items-center gap-2">
+              <MdVerified /><span>Your company is <strong>HireVerse Verified</strong>!</span>
+            </div>
+          )}
+
+          <div className="glassmorphism p-6 rounded-2xl">
+            <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+              <FaPlusCircle className="text-brand-purple" /><span>Post a New Job</span>
+            </h2>
+
+            {user.verificationStatus !== 'verified' ? (
+              <p className="text-xs text-gray-400 text-center py-6">
+                Posting jobs is restricted to verified companies.
+              </p>
+            ) : (
+              <form onSubmit={handleCreateJob} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Job Title *</label>
+                  <input type="text" required value={jobForm.jobTitle} onChange={e => setJobForm({...jobForm, jobTitle: e.target.value})}
+                    placeholder="e.g. Senior Frontend Engineer"
+                    className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Job Type</label>
+                  <select value={jobForm.jobType} onChange={e => setJobForm({...jobForm, jobType: e.target.value})}
+                    className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple">
+                    {['Full-time','Part-time','Internship','Contract','Remote'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Description *</label>
+                  <textarea required value={jobForm.description} onChange={e => setJobForm({...jobForm, description: e.target.value})}
+                    placeholder="Describe the role, responsibilities..."
+                    className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple min-h-[80px] resize-none" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Required Skills (comma-separated)</label>
+                  <input type="text" value={jobForm.requiredSkills} onChange={e => setJobForm({...jobForm, requiredSkills: e.target.value})}
+                    placeholder="e.g. React, Node.js, MongoDB"
+                    className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1">Salary *</label>
+                    <input type="text" required value={jobForm.salary} onChange={e => setJobForm({...jobForm, salary: e.target.value})}
+                      placeholder="e.g. ₹8-12 LPA"
+                      className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1">Location *</label>
+                    <input type="text" required value={jobForm.location} onChange={e => setJobForm({...jobForm, location: e.target.value})}
+                      placeholder="e.g. Remote / Chennai"
+                      className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple" />
+                  </div>
+                </div>
+
+                {/* Round Builder */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
+                      <FaLayerGroup className="text-violet-400" /> Hiring Rounds
+                    </label>
+                    <button type="button" onClick={addRound} className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
+                      <FaPlus className="w-2.5 h-2.5" /> Add Round
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {rounds.map((r, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <span className="text-xs text-gray-500 w-5 shrink-0">{idx + 1}.</span>
+                        <input
+                          type="text"
+                          value={r.name}
+                          onChange={e => updateRound(idx, e.target.value)}
+                          placeholder={`Round ${idx + 1} name (e.g. Aptitude Test)`}
+                          className="flex-1 bg-brand-dark border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                        />
+                        {rounds.length > 1 && (
+                          <button type="button" onClick={() => removeRound(idx)} className="text-red-400/60 hover:text-red-400 p-1">
+                            <FaTrash className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Form Questions Builder */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
+                      <FaClipboardList className="text-violet-400" /> Application Form Questions
+                    </label>
+                    <button type="button" onClick={addQuestion} className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
+                      <FaPlus className="w-2.5 h-2.5" /> Add Question
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {formQuestions.map((q, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={q.question}
+                            onChange={e => updateQuestion(idx, 'question', e.target.value)}
+                            placeholder={`Question ${idx + 1}`}
+                            className="flex-1 bg-brand-dark border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                          />
+                          {formQuestions.length > 1 && (
+                            <button type="button" onClick={() => removeQuestion(idx)} className="text-red-400/60 hover:text-red-400 p-1">
+                              <FaTrash className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        <label className="flex items-center gap-1.5 text-[10px] text-gray-500 ml-1 cursor-pointer">
+                          <input type="checkbox" checked={q.required} onChange={e => updateQuestion(idx, 'required', e.target.checked)}
+                            className="accent-violet-500 w-3 h-3" />
+                          Required
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="w-full py-2.5 bg-brand-purple hover:bg-opacity-95 font-semibold text-sm rounded-xl transition-all disabled:opacity-50 shadow-md shadow-brand-purple/20"
+                >
+                  {actionLoading ? 'Creating...' : 'Publish Job Listing'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT: Job Listings + Applicants */}
+        <div className="lg:col-span-2 space-y-6">
+          <h2 className="text-2xl font-bold flex items-center space-x-2">
+            <FaBriefcase className="text-brand-purple" />
+            <span>Your Jobs ({jobs.length})</span>
+          </h2>
+
+          {jobs.length === 0 ? (
+            <div className="glassmorphism p-10 rounded-2xl text-center text-gray-400">
+              <FaBriefcase className="w-10 h-10 mx-auto mb-3 text-gray-600" />
+              <p className="text-lg">No job openings created yet.</p>
+              <p className="text-sm mt-1">Use the form on the left to post a job opportunity.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {jobs.map(job => (
+                <div key={job._id} className={`glassmorphism p-5 rounded-2xl border transition-all ${activeJobId === job._id ? 'border-violet-500' : 'border-transparent'} ${!job.isActive ? 'opacity-60' : ''}`}>
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-bold text-white">{job.jobTitle}</h3>
+                        {!job.isActive && <span className="text-xs bg-gray-500/20 text-gray-400 border border-gray-500/30 px-2 py-0.5 rounded-full">Closed</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-1">
+                        <span className="flex items-center gap-1"><FaMapMarkerAlt className="text-brand-purple" />{job.location}</span>
+                        <span className="flex items-center gap-1"><FaDollarSign className="text-brand-purple" />{job.salary}</span>
+                        {job.rounds?.length > 0 && (
+                          <span className="flex items-center gap-1 text-violet-400"><FaLayerGroup />{job.rounds.length} rounds</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 items-end">
+                      <button
+                        onClick={() => fetchJobApplicants(job)}
+                        className="px-3 py-1.5 bg-brand-purple/10 border border-brand-purple/40 hover:bg-brand-purple text-xs font-semibold rounded-xl text-brand-accent hover:text-white transition-colors whitespace-nowrap"
+                      >
+                        Applicants ({job.applicants?.length || 0})
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(job._id)}
+                        className={`text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors ${job.isActive ? 'text-emerald-400 hover:text-red-400' : 'text-gray-400 hover:text-emerald-400'}`}
+                      >
+                        {job.isActive ? <><FaToggleOn className="w-4 h-4" /> Active</> : <><FaToggleOff className="w-4 h-4" /> Closed</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-300 mt-3 line-clamp-2 leading-relaxed">{job.description}</p>
+
+                  {job.requiredSkills?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {job.requiredSkills.map((s, i) => (
+                        <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-brand-medium text-brand-accent">{s}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Applicant Review Panel */}
+          {activeJobId && (
+            <div className="glassmorphism p-6 rounded-2xl mt-2">
+              <h3 className="text-lg font-bold mb-4 border-b border-brand-medium pb-3 text-brand-accent flex items-center gap-2">
+                <FaClipboardList />
+                Applicants — {activeJob?.jobTitle}
+                <span className="text-sm text-gray-400 font-normal">({applicants.length})</span>
+              </h3>
+
+              {loadingApplicants ? (
+                <div className="flex justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-purple border-t-transparent" />
+                </div>
+              ) : applicants.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">No applications submitted for this role yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {applicants.map(app => (
+                    <ApplicantCard key={app._id} app={app} job={activeJob} onAction={handleApplicantAction} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CompanyDashboard;
