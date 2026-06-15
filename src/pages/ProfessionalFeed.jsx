@@ -4,7 +4,7 @@ import api from '../services/api';
 import { Link } from 'react-router-dom';
 import {
   FaUserFriends, FaThumbsUp, FaCommentAlt,
-  FaUserPlus, FaUserMinus, FaBuilding
+  FaUserPlus, FaUserMinus, FaBuilding, FaCheck
 } from 'react-icons/fa';
 import { MdVerified } from 'react-icons/md';
 
@@ -17,6 +17,7 @@ const ProfessionalFeed = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [requestedIds, setRequestedIds] = useState([]);
 
   useEffect(() => {
     fetchFeedData();
@@ -70,11 +71,24 @@ const ProfessionalFeed = () => {
   };
 
   const handleFollowChange = async (targetId, isFollowing) => {
+    if (requestedIds.includes(targetId)) return;
     try {
       const url = isFollowing ? `/auth/unfollow/${targetId}` : `/auth/follow/${targetId}`;
       const res = await api.post(url);
-      handleFollowToggle(res.data.following);
-    } catch { /* ignore */ }
+      if (res.data.requestPending) {
+        setRequestedIds(prev => [...prev, targetId]);
+        alert('Connection request sent!');
+      } else if (res.data.following) {
+        handleFollowToggle(res.data.following);
+      }
+    } catch (err) {
+      if (err.response?.status === 400) {
+        if (err.response.data.message.includes('pending')) {
+          setRequestedIds(prev => [...prev, targetId]);
+        }
+        alert(err.response.data.message);
+      }
+    }
   };
 
   if (loading) {
@@ -203,9 +217,12 @@ const ProfessionalFeed = () => {
                   {post.userId?._id !== user._id && (
                     <button
                       onClick={() => handleFollowChange(post.userId?._id, user.following?.includes(post.userId?._id))}
-                      className="px-3 py-1.5 rounded-lg border border-brand-purple/40 text-[10px] font-bold text-brand-accent hover:bg-brand-purple hover:text-white transition-colors"
+                      className={`px-3 py-1.5 rounded-lg border border-brand-purple/40 text-[10px] font-bold transition-colors ${
+                        requestedIds.includes(post.userId?._id) ? 'text-gray-400 bg-brand-medium cursor-not-allowed' : 'text-brand-accent hover:bg-brand-purple hover:text-white'
+                      }`}
+                      disabled={requestedIds.includes(post.userId?._id)}
                     >
-                      {user.following?.includes(post.userId?._id) ? 'Following' : '+ Follow'}
+                      {user.following?.includes(post.userId?._id) ? 'Following' : requestedIds.includes(post.userId?._id) ? 'Requested' : '+ Follow'}
                     </button>
                   )}
                 </div>
@@ -277,14 +294,17 @@ const ProfessionalFeed = () => {
                       </div>
                       <button
                         onClick={() => handleFollowChange(recUser._id, isFollowing)}
+                        disabled={requestedIds.includes(recUser._id)}
                         className={`p-1.5 rounded-lg border transition-colors flex-shrink-0 ${
                           isFollowing 
                             ? 'border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white' 
+                            : requestedIds.includes(recUser._id)
+                            ? 'border-gray-500 text-gray-400 bg-brand-medium cursor-not-allowed'
                             : 'border-brand-medium text-white bg-brand-purple/20 hover:bg-brand-purple'
                         }`}
-                        title={isFollowing ? 'Unfollow' : 'Follow'}
+                        title={isFollowing ? 'Unfollow' : requestedIds.includes(recUser._id) ? 'Requested' : 'Follow'}
                       >
-                        {isFollowing ? <FaUserMinus /> : <FaUserPlus />}
+                        {isFollowing ? <FaUserMinus /> : requestedIds.includes(recUser._id) ? <FaCheck className="w-3.5 h-3.5" /> : <FaUserPlus />}
                       </button>
                     </div>
                   );
