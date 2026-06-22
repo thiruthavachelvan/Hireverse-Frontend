@@ -199,7 +199,7 @@ const ProfessionalFeed = () => {
                     />
                     <div>
                       <div className="flex items-center gap-1">
-                        <span className="font-semibold text-white text-sm">{post.userId?.name}</span>
+                        <Link to={`/profile/${post.userId?._id}`} className="font-semibold text-white text-sm hover:text-brand-purple transition-colors">{post.userId?.name}</Link>
                         {isCompanyPost && (
                           <span className="text-[10px] bg-brand-purple/30 text-brand-accent px-1.5 py-0.2 rounded border border-brand-purple/40">Company</span>
                         )}
@@ -288,7 +288,7 @@ const ProfessionalFeed = () => {
                           className="w-8 h-8 rounded-full border border-brand-purple bg-brand-medium"
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-white truncate max-w-[100px]">{recUser.name}</div>
+                          <Link to={`/profile/${recUser._id}`} className="block font-semibold text-white truncate max-w-[100px] hover:text-brand-purple transition-colors">{recUser.name}</Link>
                           <div className="text-[10px] text-gray-400 truncate max-w-[100px]">{recUser.headline || 'Professional'}</div>
                         </div>
                       </div>
@@ -333,7 +333,7 @@ const ProfessionalFeed = () => {
                         />
                         <div className="min-w-0">
                           <div className="font-semibold text-white truncate max-w-[100px] flex items-center gap-0.5">
-                            <span>{company.name}</span>
+                            <Link to={`/companies/${company._id}`} className="hover:text-brand-accent transition-colors">{company.name}</Link>
                             {company.verificationStatus === 'verified' && (
                               <MdVerified className="text-brand-accent flex-shrink-0" />
                             )}

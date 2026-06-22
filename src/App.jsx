@@ -9,8 +9,11 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import PublicProfile from './pages/PublicProfile';
 import Jobs from './pages/Jobs';
 import JobDetail from './pages/JobDetail';
+import AssessmentRules from './pages/AssessmentRules';
+import AssessmentTest from './pages/AssessmentTest';
 import MyApplications from './pages/MyApplications';
 import ProfessionalFeed from './pages/ProfessionalFeed';
 import Interviews from './pages/Interviews';
@@ -148,6 +151,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/profile/:userId"
+                element={
+                  <ProtectedRoute>
+                    <PublicProfile />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Private routes (Professional/Candidates only) */}
               <Route
@@ -163,6 +174,22 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['professional']}>
                     <Interviews />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/assessment/job/:jobId/round/:roundNumber/rules"
+                element={
+                  <ProtectedRoute allowedRoles={['professional']}>
+                    <AssessmentRules />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/assessment/:assessmentId"
+                element={
+                  <ProtectedRoute allowedRoles={['professional']}>
+                    <AssessmentTest />
                   </ProtectedRoute>
                 }
               />

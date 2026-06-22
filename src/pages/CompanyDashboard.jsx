@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { Link } from 'react-router-dom';
 import {
   FaBriefcase, FaPlusCircle, FaMapMarkerAlt, FaDollarSign,
   FaLayerGroup, FaPlus, FaTrash, FaCalendarAlt, FaCheckCircle,
@@ -77,7 +78,7 @@ const ApplicantCard = ({ app, job, onAction }) => {
           className="w-10 h-10 rounded-full border border-brand-purple bg-brand-medium flex-shrink-0"
         />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-white">{app.applicantId?.name}</p>
+          <Link to={`/profile/${app.applicantId?._id}`} className="font-semibold text-sm text-white hover:text-brand-purple transition-colors">{app.applicantId?.name}</Link>
           <p className="text-gray-400 text-xs">{app.applicantId?.headline || app.applicantId?.email}</p>
           {app.applicantId?.skills?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
@@ -323,12 +324,26 @@ const CompanyDashboard = () => {
   const [hiringInfo, setHiringInfo] = useState(user?.companyDetails?.upcomingHiring || '');
   const [updatingHiringInfo, setUpdatingHiringInfo] = useState(false);
   const [hiringToast, setHiringToast] = useState('');
-  const [rounds, setRounds] = useState([{ name: '' }]);
+  const [rounds, setRounds] = useState([{ 
+    name: '', 
+    hasAssessment: false,
+    assessmentType: 'Aptitude MCQ',
+    numQuestions: 20,
+    diffEasy: 40,
+    diffMedium: 40,
+    diffHard: 20,
+    duration: 45,
+    startTime: '',
+    endTime: ''
+  }]);
   const [formQuestions, setFormQuestions] = useState([{ question: '', required: true }]);
   const [activeJobId, setActiveJobId] = useState(null);
   const [activeJob, setActiveJob] = useState(null);
   const [applicants, setApplicants] = useState([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -346,9 +361,13 @@ const CompanyDashboard = () => {
     setLoading(false);
   };
 
-  const addRound = () => setRounds(r => [...r, { name: '' }]);
+  const addRound = () => setRounds(r => [...r, { 
+    name: '', hasAssessment: false, assessmentType: 'Aptitude MCQ', 
+    numQuestions: 20, diffEasy: 40, diffMedium: 40, diffHard: 20, 
+    duration: 45, startTime: '', endTime: '' 
+  }]);
   const removeRound = (idx) => setRounds(r => r.filter((_, i) => i !== idx));
-  const updateRound = (idx, val) => setRounds(r => r.map((item, i) => i === idx ? { ...item, name: val } : item));
+  const updateRound = (idx, field, val) => setRounds(r => r.map((item, i) => i === idx ? { ...item, [field]: val } : item));
 
   const addQuestion = () => setFormQuestions(q => [...q, { question: '', required: true }]);
   const removeQuestion = (idx) => setFormQuestions(q => q.filter((_, i) => i !== idx));
@@ -366,7 +385,20 @@ const CompanyDashboard = () => {
       setError('Please fill out all required fields.');
       return;
     }
-    const validRounds = rounds.filter(r => r.name.trim());
+    const validRounds = rounds.filter(r => r.name.trim()).map((r, i) => {
+      const base = { roundNumber: i + 1, name: r.name, hasAssessment: r.hasAssessment };
+      if (r.hasAssessment) {
+        base.assessmentDetails = {
+          type: r.assessmentType,
+          numQuestions: r.numQuestions,
+          difficulty: { easy: r.diffEasy, medium: r.diffMedium, hard: r.diffHard },
+          duration: r.duration,
+          startTime: r.startTime,
+          endTime: r.endTime
+        };
+      }
+      return base;
+    });
     const validQuestions = formQuestions.filter(q => q.question.trim());
     setActionLoading(true);
     setError('');
@@ -378,7 +410,7 @@ const CompanyDashboard = () => {
       });
       setJobs([res.data, ...jobs]);
       setJobForm({ jobTitle: '', description: '', requiredSkills: '', salary: '', location: '', jobType: 'Full-time', shareToFeed: true });
-      setRounds([{ name: '' }]);
+      setRounds([{ name: '', hasAssessment: false, assessmentType: 'Aptitude MCQ', numQuestions: 20, diffEasy: 40, diffMedium: 40, diffHard: 20, duration: 45, startTime: '', endTime: '' }]);
       setFormQuestions([{ question: '', required: true }]);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create job.');
@@ -401,14 +433,29 @@ const CompanyDashboard = () => {
   };
 
   const fetchJobApplicants = async (job) => {
-    setActiveJobId(job._id);
     setActiveJob(job);
+    setActiveJobId(job._id);
+    setShowLeaderboard(false);
     setLoadingApplicants(true);
     try {
       const res = await api.get(`/applications/job/${job._id}`);
       setApplicants(res.data);
     } catch { setError('Failed to load job applicants.'); }
     setLoadingApplicants(false);
+  };
+
+  const fetchJobLeaderboard = async (job) => {
+    setActiveJob(job);
+    setActiveJobId(job._id);
+    setShowLeaderboard(true);
+    setLoadingLeaderboard(true);
+    try {
+      const { data } = await api.get(`/assessments/job/${job._id}/results`);
+      setLeaderboard(data);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoadingLeaderboard(false);
   };
 
   const handleApplicantAction = (appId, updatedApp) => {
@@ -550,22 +597,79 @@ const CompanyDashboard = () => {
                       <FaPlus className="w-2.5 h-2.5" /> Add Round
                     </button>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {rounds.map((r, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <span className="text-xs text-gray-500 w-5 shrink-0">{idx + 1}.</span>
-                        <input
-                          type="text"
-                          value={r.name}
-                          onChange={e => updateRound(idx, e.target.value)}
-                          placeholder={`Round ${idx + 1} name (e.g. Aptitude Test)`}
-                          className="flex-1 bg-brand-dark border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
-                        />
-                        {rounds.length > 1 && (
-                          <button type="button" onClick={() => removeRound(idx)} className="text-red-400/60 hover:text-red-400 p-1">
-                            <FaTrash className="w-3 h-3" />
-                          </button>
-                        )}
+                      <div key={idx} className="bg-brand-medium/10 border border-white/5 rounded-xl p-3 space-y-3">
+                        <div className="flex gap-2 items-center">
+                          <span className="text-xs text-gray-500 w-5 shrink-0">{idx + 1}.</span>
+                          <input
+                            type="text"
+                            value={r.name}
+                            onChange={e => updateRound(idx, 'name', e.target.value)}
+                            placeholder={`Round ${idx + 1} name (e.g. Aptitude Test)`}
+                            className="flex-1 bg-brand-dark border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                          />
+                          {rounds.length > 1 && (
+                            <button type="button" onClick={() => removeRound(idx)} className="text-red-400/60 hover:text-red-400 p-1">
+                              <FaTrash className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="pl-7">
+                          <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer mb-2">
+                            <input type="checkbox" checked={r.hasAssessment} onChange={e => updateRound(idx, 'hasAssessment', e.target.checked)} className="accent-violet-500 w-3 h-3" />
+                            Enable Online Assessment for this round
+                          </label>
+                          
+                          {r.hasAssessment && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 bg-brand-dark/50 p-3 rounded-lg border border-white/5">
+                              <div>
+                                <label className="text-[10px] text-gray-500 block mb-1">Assessment Type</label>
+                                <select value={r.assessmentType} onChange={e => updateRound(idx, 'assessmentType', e.target.value)} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none">
+                                  <option>Aptitude MCQ</option>
+                                  <option>Technical MCQ</option>
+                                  <option>Coding Round</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-gray-500 block mb-1">Number of Questions</label>
+                                <input type="number" min="1" value={r.numQuestions} onChange={e => updateRound(idx, 'numQuestions', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
+                              </div>
+                              <div className="md:col-span-2 grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Easy (%)</label>
+                                  <input type="number" min="0" max="100" value={r.diffEasy} onChange={e => updateRound(idx, 'diffEasy', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Medium (%)</label>
+                                  <input type="number" min="0" max="100" value={r.diffMedium} onChange={e => updateRound(idx, 'diffMedium', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Hard (%)</label>
+                                  <input type="number" min="0" max="100" value={r.diffHard} onChange={e => updateRound(idx, 'diffHard', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
+                                </div>
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="text-[10px] text-amber-500 block mb-1">Ensure percentages add up to 100%. (Current: {r.diffEasy + r.diffMedium + r.diffHard}%)</label>
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-gray-500 block mb-1">Duration (minutes)</label>
+                                <input type="number" min="5" value={r.duration} onChange={e => updateRound(idx, 'duration', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
+                              </div>
+                              <div className="md:col-span-2 grid grid-cols-2 gap-2 mt-1">
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Availability Start</label>
+                                  <input type="datetime-local" value={r.startTime} onChange={e => updateRound(idx, 'startTime', e.target.value)} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none" />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Availability End</label>
+                                  <input type="datetime-local" value={r.endTime} onChange={e => updateRound(idx, 'endTime', e.target.value)} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -663,11 +767,19 @@ const CompanyDashboard = () => {
                     </div>
                     <div className="flex flex-col gap-2 items-end">
                       <button
-                        onClick={() => fetchJobApplicants(job)}
+                        onClick={() => { setShowLeaderboard(false); fetchJobApplicants(job); }}
                         className="px-3 py-1.5 bg-brand-purple/10 border border-brand-purple/40 hover:bg-brand-purple text-xs font-semibold rounded-xl text-brand-accent hover:text-white transition-colors whitespace-nowrap"
                       >
                         Applicants ({job.applicants?.length || 0})
                       </button>
+                      {job.rounds?.some(r => r.hasAssessment) && (
+                        <button
+                          onClick={() => fetchJobLeaderboard(job)}
+                          className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/40 hover:bg-emerald-500 text-xs font-semibold rounded-xl text-emerald-400 hover:text-white transition-colors whitespace-nowrap"
+                        >
+                          Assessment Results
+                        </button>
+                      )}
                       <button
                         onClick={() => handleToggleActive(job._id)}
                         className={`text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors ${job.isActive ? 'text-emerald-400 hover:text-red-400' : 'text-gray-400 hover:text-emerald-400'}`}
@@ -692,7 +804,7 @@ const CompanyDashboard = () => {
           )}
 
           {/* Applicant Review Panel */}
-          {activeJobId && (
+          {activeJobId && !showLeaderboard && (
             <div className="glassmorphism p-6 rounded-2xl mt-2">
               <h3 className="text-lg font-bold mb-4 border-b border-brand-medium pb-3 text-brand-accent flex items-center gap-2">
                 <FaClipboardList />
@@ -710,6 +822,66 @@ const CompanyDashboard = () => {
                 <div className="space-y-3">
                   {applicants.map(app => (
                     <ApplicantCard key={app._id} app={app} job={activeJob} onAction={handleApplicantAction} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeJobId && showLeaderboard && (
+            <div className="glassmorphism p-6 rounded-2xl mt-2">
+              <h3 className="text-lg font-bold mb-4 border-b border-brand-medium pb-3 text-emerald-400 flex items-center gap-2">
+                <FaTrophy />
+                Assessment Leaderboard — {activeJob?.jobTitle}
+              </h3>
+              {loadingLeaderboard ? (
+                <div className="flex justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">No assessment results available yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {leaderboard.map((result, idx) => (
+                    <div key={result._id} className="bg-brand-medium/20 border border-white/5 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-center">
+                      <div className="font-bold text-xl text-gray-500 w-8 text-center">#{idx + 1}</div>
+                      <img src={result.candidateId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${result.candidateId?.name}`} alt="" className="w-12 h-12 rounded-full border border-emerald-500" />
+                      <div className="flex-1">
+                        <Link to={`/profile/${result.candidateId?._id}`} className="font-bold text-white hover:text-emerald-400 transition-colors">{result.candidateId?.name}</Link>
+                        <p className="text-xs text-gray-400">{result.candidateId?.email}</p>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-center">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Score</p>
+                          <p className="font-bold text-lg text-white">{result.percentage}%</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Trust Score</p>
+                          <p className={`font-bold text-lg ${result.proctorReport?.trustScore >= 80 ? 'text-emerald-400' : result.proctorReport?.trustScore >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                            {result.proctorReport?.trustScore || 0}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Time Taken</p>
+                          <p className="font-bold text-lg text-white">{result.timeTaken}m</p>
+                        </div>
+                        <div className="text-center w-24">
+                          <StatusChip status={result.status === 'Passed' ? 'hired' : 'rejected'} />
+                        </div>
+                      </div>
+                      <div className="w-full sm:w-auto mt-2 sm:mt-0 text-xs">
+                        {(result.proctorReport?.violations?.length > 0 || result.proctorReport?.trustScore < 100) && (
+                          <div className="bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg p-2 max-w-xs text-[10px]">
+                            <strong>Proctor Flags:</strong>
+                            <ul className="list-disc pl-4 mt-1">
+                              {result.proctorReport.tabSwitchCount > 0 && <li>Tab switches: {result.proctorReport.tabSwitchCount}</li>}
+                              {result.proctorReport.fullscreenExitCount > 0 && <li>Fullscreen exits: {result.proctorReport.fullscreenExitCount}</li>}
+                              {result.proctorReport.copyPasteAttempts > 0 && <li>Copy/Paste attempts: {result.proctorReport.copyPasteAttempts}</li>}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

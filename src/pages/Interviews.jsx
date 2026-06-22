@@ -33,6 +33,7 @@ const Interviews = () => {
           
           if (app.roundSchedules && Array.isArray(app.roundSchedules)) {
             app.roundSchedules.forEach((schedule) => {
+              const jobRound = job.rounds?.find(r => r.roundNumber === schedule.roundNumber);
               allSchedules.push({
                 scheduleId: `${app._id}-${schedule.roundNumber}`,
                 applicationId: app._id,
@@ -48,7 +49,9 @@ const Interviews = () => {
                 venue: schedule.venue || 'Online / Remote',
                 notes: schedule.notes || '',
                 applicationStatus: app.status,
-                currentRound: app.currentRound
+                currentRound: app.currentRound,
+                hasAssessment: jobRound?.hasAssessment,
+                assessmentDetails: jobRound?.assessmentDetails
               });
             });
           }
@@ -238,13 +241,34 @@ const Interviews = () => {
 
                   {/* Actions / Direct links */}
                   <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
-                    <span className="text-gray-500">Scheduled on Hireverse</span>
-                    <Link
-                      to="/my-applications"
-                      className="text-brand-accent hover:text-brand-purple font-semibold flex items-center gap-1 transition-colors"
-                    >
-                      View Full Application Progress <FaChevronRight className="w-2.5 h-2.5" />
-                    </Link>
+                    {int.hasAssessment ? (
+                      <div className="flex gap-3 items-center w-full justify-between">
+                        <div className="text-gray-400">
+                          <span className="text-violet-400 font-semibold">{int.assessmentDetails?.duration} Min Online Assessment</span>
+                          {int.assessmentDetails?.startTime && (
+                            <span className="block text-[10px]">Active from: {new Date(int.assessmentDetails.startTime).toLocaleString()}</span>
+                          )}
+                        </div>
+                        {isCurrentRound && !isApplicationRejected && !isApplicationHired && (
+                          <Link
+                            to={`/assessment/job/${int.jobId}/round/${int.roundNumber}/rules`}
+                            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all"
+                          >
+                            Start Assessment
+                          </Link>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-gray-500">Scheduled on Hireverse</span>
+                        <Link
+                          to="/my-applications"
+                          className="text-brand-accent hover:text-brand-purple font-semibold flex items-center gap-1 transition-colors"
+                        >
+                          View Full Application Progress <FaChevronRight className="w-2.5 h-2.5" />
+                        </Link>
+                      </>
+                    )}
                   </div>
 
                 </div>
