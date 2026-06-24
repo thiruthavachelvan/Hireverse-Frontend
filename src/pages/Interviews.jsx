@@ -33,7 +33,6 @@ const Interviews = () => {
           
           if (app.roundSchedules && Array.isArray(app.roundSchedules)) {
             app.roundSchedules.forEach((schedule) => {
-              const jobRound = job.rounds?.find(r => r.roundNumber === schedule.roundNumber);
               allSchedules.push({
                 scheduleId: `${app._id}-${schedule.roundNumber}`,
                 applicationId: app._id,
@@ -50,8 +49,9 @@ const Interviews = () => {
                 notes: schedule.notes || '',
                 applicationStatus: app.status,
                 currentRound: app.currentRound,
-                hasAssessment: jobRound?.hasAssessment,
-                assessmentDetails: jobRound?.assessmentDetails
+                // Assessment details come directly from the schedule entry
+                hasAssessment: schedule.hasAssessment,
+                assessmentDetails: schedule.assessmentDetails,
               });
             });
           }

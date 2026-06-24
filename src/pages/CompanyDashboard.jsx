@@ -33,6 +33,15 @@ const ApplicantCard = ({ app, job, onAction }) => {
     scheduledAt: '',
     venue: '',
     notes: '',
+    hasAssessment: false,
+    assessmentType: 'Aptitude MCQ',
+    numQuestions: 20,
+    diffEasy: 40,
+    diffMedium: 40,
+    diffHard: 20,
+    duration: 45,
+    startTime: '',
+    endTime: '',
   });
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState('');
@@ -54,7 +63,22 @@ const ApplicantCard = ({ app, job, onAction }) => {
   const handleSchedule = async (e) => {
     e.preventDefault();
     if (!scheduleData.scheduledAt) return;
-    await doAction('schedule-round', scheduleData);
+    const payload = {
+      roundNumber: scheduleData.roundNumber,
+      scheduledAt: scheduleData.scheduledAt,
+      venue: scheduleData.venue,
+      notes: scheduleData.notes,
+      hasAssessment: scheduleData.hasAssessment,
+      assessmentDetails: scheduleData.hasAssessment ? {
+        assessmentType: scheduleData.assessmentType,
+        numQuestions: scheduleData.numQuestions,
+        difficulty: { easy: scheduleData.diffEasy, medium: scheduleData.diffMedium, hard: scheduleData.diffHard },
+        duration: scheduleData.duration,
+        startTime: scheduleData.startTime,
+        endTime: scheduleData.endTime,
+      } : undefined,
+    };
+    await doAction('schedule-round', payload);
     setShowScheduler(false);
   };
 
@@ -246,8 +270,8 @@ const ApplicantCard = ({ app, job, onAction }) => {
 
           {/* Schedule Round Form */}
           {showScheduler && (
-            <form onSubmit={handleSchedule} className="bg-white/3 rounded-xl p-4 space-y-3 border border-white/10">
-              <p className="text-sm font-semibold text-white">Schedule a Round</p>
+            <form onSubmit={handleSchedule} className="bg-white/3 rounded-xl p-4 space-y-4 border border-white/10">
+              <p className="text-sm font-bold text-white">Schedule a Round</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block">Round</label>
@@ -292,7 +316,97 @@ const ApplicantCard = ({ app, job, onAction }) => {
                   className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
                 />
               </div>
-              <div className="flex gap-2">
+
+              {/* Assessment Toggle */}
+              <div className="border-t border-white/10 pt-3">
+                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer mb-3">
+                  <input
+                    type="checkbox"
+                    checked={scheduleData.hasAssessment}
+                    onChange={e => setScheduleData(p => ({ ...p, hasAssessment: e.target.checked }))}
+                    className="accent-violet-500 w-4 h-4"
+                  />
+                  <span className="font-medium">Include Online Assessment for this round</span>
+                </label>
+
+                {scheduleData.hasAssessment && (
+                  <div className="bg-brand-dark/60 border border-violet-500/20 rounded-xl p-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Assessment Type</label>
+                        <select
+                          value={scheduleData.assessmentType}
+                          onChange={e => setScheduleData(p => ({ ...p, assessmentType: e.target.value }))}
+                          className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none"
+                        >
+                          <option>Aptitude MCQ</option>
+                          <option>Technical MCQ</option>
+                          <option>Coding Round</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">No. of Questions</label>
+                        <input
+                          type="number" min="1" max="50"
+                          value={scheduleData.numQuestions}
+                          onChange={e => setScheduleData(p => ({ ...p, numQuestions: parseInt(e.target.value) }))}
+                          className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Difficulty Distribution</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-emerald-400 block mb-0.5">Easy (%)</label>
+                          <input type="number" min="0" max="100" value={scheduleData.diffEasy}
+                            onChange={e => setScheduleData(p => ({ ...p, diffEasy: parseInt(e.target.value) }))}
+                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-amber-400 block mb-0.5">Medium (%)</label>
+                          <input type="number" min="0" max="100" value={scheduleData.diffMedium}
+                            onChange={e => setScheduleData(p => ({ ...p, diffMedium: parseInt(e.target.value) }))}
+                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-red-400 block mb-0.5">Hard (%)</label>
+                          <input type="number" min="0" max="100" value={scheduleData.diffHard}
+                            onChange={e => setScheduleData(p => ({ ...p, diffHard: parseInt(e.target.value) }))}
+                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
+                        </div>
+                      </div>
+                      {(scheduleData.diffEasy + scheduleData.diffMedium + scheduleData.diffHard) !== 100 && (
+                        <p className="text-[10px] text-amber-400 mt-1">⚠ Percentages should add up to 100% (Current: {scheduleData.diffEasy + scheduleData.diffMedium + scheduleData.diffHard}%)</p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Duration (minutes)</label>
+                        <input type="number" min="5" value={scheduleData.duration}
+                          onChange={e => setScheduleData(p => ({ ...p, duration: parseInt(e.target.value) }))}
+                          className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Available From</label>
+                          <input type="datetime-local" value={scheduleData.startTime}
+                            onChange={e => setScheduleData(p => ({ ...p, startTime: e.target.value }))}
+                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-[10px] text-white focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Available Until</label>
+                          <input type="datetime-local" value={scheduleData.endTime}
+                            onChange={e => setScheduleData(p => ({ ...p, endTime: e.target.value }))}
+                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-[10px] text-white focus:outline-none" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-1">
                 <button type="submit" disabled={actionLoading} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
                   {actionLoading ? 'Saving...' : 'Send Schedule Notification'}
                 </button>
@@ -324,18 +438,7 @@ const CompanyDashboard = () => {
   const [hiringInfo, setHiringInfo] = useState(user?.companyDetails?.upcomingHiring || '');
   const [updatingHiringInfo, setUpdatingHiringInfo] = useState(false);
   const [hiringToast, setHiringToast] = useState('');
-  const [rounds, setRounds] = useState([{ 
-    name: '', 
-    hasAssessment: false,
-    assessmentType: 'Aptitude MCQ',
-    numQuestions: 20,
-    diffEasy: 40,
-    diffMedium: 40,
-    diffHard: 20,
-    duration: 45,
-    startTime: '',
-    endTime: ''
-  }]);
+  const [rounds, setRounds] = useState([{ name: '' }]);
   const [formQuestions, setFormQuestions] = useState([{ question: '', required: true }]);
   const [activeJobId, setActiveJobId] = useState(null);
   const [activeJob, setActiveJob] = useState(null);
@@ -361,13 +464,9 @@ const CompanyDashboard = () => {
     setLoading(false);
   };
 
-  const addRound = () => setRounds(r => [...r, { 
-    name: '', hasAssessment: false, assessmentType: 'Aptitude MCQ', 
-    numQuestions: 20, diffEasy: 40, diffMedium: 40, diffHard: 20, 
-    duration: 45, startTime: '', endTime: '' 
-  }]);
+  const addRound = () => setRounds(r => [...r, { name: '' }]);
   const removeRound = (idx) => setRounds(r => r.filter((_, i) => i !== idx));
-  const updateRound = (idx, field, val) => setRounds(r => r.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+  const updateRound = (idx, val) => setRounds(r => r.map((item, i) => i === idx ? { ...item, name: val } : item));
 
   const addQuestion = () => setFormQuestions(q => [...q, { question: '', required: true }]);
   const removeQuestion = (idx) => setFormQuestions(q => q.filter((_, i) => i !== idx));
@@ -385,20 +484,7 @@ const CompanyDashboard = () => {
       setError('Please fill out all required fields.');
       return;
     }
-    const validRounds = rounds.filter(r => r.name.trim()).map((r, i) => {
-      const base = { roundNumber: i + 1, name: r.name, hasAssessment: r.hasAssessment };
-      if (r.hasAssessment) {
-        base.assessmentDetails = {
-          type: r.assessmentType,
-          numQuestions: r.numQuestions,
-          difficulty: { easy: r.diffEasy, medium: r.diffMedium, hard: r.diffHard },
-          duration: r.duration,
-          startTime: r.startTime,
-          endTime: r.endTime
-        };
-      }
-      return base;
-    });
+    const validRounds = rounds.filter(r => r.name.trim()).map((r, i) => ({ roundNumber: i + 1, name: r.name }));
     const validQuestions = formQuestions.filter(q => q.question.trim());
     setActionLoading(true);
     setError('');
@@ -410,7 +496,7 @@ const CompanyDashboard = () => {
       });
       setJobs([res.data, ...jobs]);
       setJobForm({ jobTitle: '', description: '', requiredSkills: '', salary: '', location: '', jobType: 'Full-time', shareToFeed: true });
-      setRounds([{ name: '', hasAssessment: false, assessmentType: 'Aptitude MCQ', numQuestions: 20, diffEasy: 40, diffMedium: 40, diffHard: 20, duration: 45, startTime: '', endTime: '' }]);
+      setRounds([{ name: '' }]);
       setFormQuestions([{ question: '', required: true }]);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create job.');
@@ -605,7 +691,7 @@ const CompanyDashboard = () => {
                           <input
                             type="text"
                             value={r.name}
-                            onChange={e => updateRound(idx, 'name', e.target.value)}
+                            onChange={e => updateRound(idx, e.target.value)}
                             placeholder={`Round ${idx + 1} name (e.g. Aptitude Test)`}
                             className="flex-1 bg-brand-dark border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
                           />
@@ -613,61 +699,6 @@ const CompanyDashboard = () => {
                             <button type="button" onClick={() => removeRound(idx)} className="text-red-400/60 hover:text-red-400 p-1">
                               <FaTrash className="w-3 h-3" />
                             </button>
-                          )}
-                        </div>
-                        
-                        <div className="pl-7">
-                          <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer mb-2">
-                            <input type="checkbox" checked={r.hasAssessment} onChange={e => updateRound(idx, 'hasAssessment', e.target.checked)} className="accent-violet-500 w-3 h-3" />
-                            Enable Online Assessment for this round
-                          </label>
-                          
-                          {r.hasAssessment && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 bg-brand-dark/50 p-3 rounded-lg border border-white/5">
-                              <div>
-                                <label className="text-[10px] text-gray-500 block mb-1">Assessment Type</label>
-                                <select value={r.assessmentType} onChange={e => updateRound(idx, 'assessmentType', e.target.value)} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none">
-                                  <option>Aptitude MCQ</option>
-                                  <option>Technical MCQ</option>
-                                  <option>Coding Round</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-gray-500 block mb-1">Number of Questions</label>
-                                <input type="number" min="1" value={r.numQuestions} onChange={e => updateRound(idx, 'numQuestions', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
-                              </div>
-                              <div className="md:col-span-2 grid grid-cols-3 gap-2">
-                                <div>
-                                  <label className="text-[10px] text-gray-500 block mb-1">Easy (%)</label>
-                                  <input type="number" min="0" max="100" value={r.diffEasy} onChange={e => updateRound(idx, 'diffEasy', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
-                                </div>
-                                <div>
-                                  <label className="text-[10px] text-gray-500 block mb-1">Medium (%)</label>
-                                  <input type="number" min="0" max="100" value={r.diffMedium} onChange={e => updateRound(idx, 'diffMedium', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
-                                </div>
-                                <div>
-                                  <label className="text-[10px] text-gray-500 block mb-1">Hard (%)</label>
-                                  <input type="number" min="0" max="100" value={r.diffHard} onChange={e => updateRound(idx, 'diffHard', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
-                                </div>
-                              </div>
-                              <div className="md:col-span-2">
-                                <label className="text-[10px] text-amber-500 block mb-1">Ensure percentages add up to 100%. (Current: {r.diffEasy + r.diffMedium + r.diffHard}%)</label>
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-gray-500 block mb-1">Duration (minutes)</label>
-                                <input type="number" min="5" value={r.duration} onChange={e => updateRound(idx, 'duration', parseInt(e.target.value))} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
-                              </div>
-                              <div className="md:col-span-2 grid grid-cols-2 gap-2 mt-1">
-                                <div>
-                                  <label className="text-[10px] text-gray-500 block mb-1">Availability Start</label>
-                                  <input type="datetime-local" value={r.startTime} onChange={e => updateRound(idx, 'startTime', e.target.value)} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none" />
-                                </div>
-                                <div>
-                                  <label className="text-[10px] text-gray-500 block mb-1">Availability End</label>
-                                  <input type="datetime-local" value={r.endTime} onChange={e => updateRound(idx, 'endTime', e.target.value)} className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-[10px] text-white focus:outline-none" />
-                                </div>
-                              </div>
-                            </div>
                           )}
                         </div>
                       </div>
