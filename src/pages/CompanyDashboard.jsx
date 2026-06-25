@@ -28,30 +28,52 @@ const StatusChip = ({ status }) => {
 const ApplicantCard = ({ app, job, onAction }) => {
   const [expanded, setExpanded] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
+
+  // Auto-detect round type from round name
+  const detectRoundType = (roundName = '') => {
+    const n = roundName.toLowerCase();
+    if (n.includes('aptitude') || n.includes('mcq') || n.includes('coding') ||
+        n.includes('test') || n.includes('assessment') || n.includes('quiz')) {
+      return 'assessment';
+    }
+    return 'interview';
+  };
+
+  const currentRoundName = job?.rounds?.find(r => r.roundNumber === (app.currentRound || 1))?.name || '';
+
   const [scheduleData, setScheduleData] = useState({
     roundNumber: app.currentRound || 1,
-    scheduledAt: '',
-    venue: '',
-    notes: '',
-    hasAssessment: false,
+    roundType: detectRoundType(currentRoundName),
+    // Assessment fields
     assessmentType: 'Aptitude MCQ',
     numQuestions: 20,
     diffEasy: 40,
     diffMedium: 40,
     diffHard: 20,
     duration: 45,
-    startTime: '',
-    endTime: '',
+    availableFrom: '',
+    availableUntil: '',
+    // Interview fields
+    scheduledAt: '',
+    meetingLink: '',
+    notes: '',
   });
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState('');
+
+  const set = (field, val) => setScheduleData(p => ({ ...p, [field]: val }));
+
+  // Auto-update roundType when round selection changes
+  const handleRoundChange = (roundNum) => {
+    const rName = job?.rounds?.find(r => r.roundNumber === Number(roundNum))?.name || '';
+    setScheduleData(p => ({ ...p, roundNumber: Number(roundNum), roundType: detectRoundType(rName) }));
+  };
 
   const doAction = async (endpoint, body = {}) => {
     setActionLoading(true);
     try {
       const { data } = await api.put(`/applications/${app._id}/${endpoint}`, body);
       onAction(app._id, data.application);
-      if (toast) setToast('');
       setToast('✓ Done');
       setTimeout(() => setToast(''), 2000);
     } catch (err) {
@@ -62,20 +84,32 @@ const ApplicantCard = ({ app, job, onAction }) => {
 
   const handleSchedule = async (e) => {
     e.preventDefault();
-    if (!scheduleData.scheduledAt) return;
+    const isAssessment = scheduleData.roundType === 'assessment';
+
+    if (!isAssessment && !scheduleData.scheduledAt) {
+      setToast('Please set the interview date and time.');
+      return;
+    }
+    if (isAssessment && (!scheduleData.availableFrom || !scheduleData.availableUntil)) {
+      setToast('Please set the assessment availability window (From & Until).');
+      return;
+    }
+
     const payload = {
       roundNumber: scheduleData.roundNumber,
-      scheduledAt: scheduleData.scheduledAt,
-      venue: scheduleData.venue,
-      notes: scheduleData.notes,
-      hasAssessment: scheduleData.hasAssessment,
-      assessmentDetails: scheduleData.hasAssessment ? {
+      roundType: scheduleData.roundType,
+      assessmentConfig: isAssessment ? {
         assessmentType: scheduleData.assessmentType,
         numQuestions: scheduleData.numQuestions,
         difficulty: { easy: scheduleData.diffEasy, medium: scheduleData.diffMedium, hard: scheduleData.diffHard },
         duration: scheduleData.duration,
-        startTime: scheduleData.startTime,
-        endTime: scheduleData.endTime,
+        availableFrom: scheduleData.availableFrom,
+        availableUntil: scheduleData.availableUntil,
+      } : undefined,
+      interviewConfig: !isAssessment ? {
+        scheduledAt: scheduleData.scheduledAt,
+        meetingLink: scheduleData.meetingLink,
+        notes: scheduleData.notes,
       } : undefined,
     };
     await doAction('schedule-round', payload);
@@ -189,19 +223,38 @@ const ApplicantCard = ({ app, job, onAction }) => {
             </div>
           )}
 
-          {/* Round Schedules */}
+          {/* Round Schedules summary */}
           {app.roundSchedules?.length > 0 && (
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-2">Round Schedules</p>
               <div className="space-y-2">
                 {app.roundSchedules.map((rs, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs bg-violet-500/10 border border-violet-500/20 rounded-lg px-3 py-2">
-                    <FaCalendarAlt className="text-violet-400 flex-shrink-0" />
-                    <span className="text-violet-300 font-medium">{rs.roundName}:</span>
-                    <span className="text-gray-300">
-                      {new Date(rs.scheduledAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                    </span>
-                    {rs.venue && <span className="text-gray-400">· {rs.venue}</span>}
+                  <div key={idx} className={`flex flex-wrap items-start gap-2 text-xs rounded-lg px-3 py-2 border ${
+                    rs.roundType === 'assessment'
+                      ? 'bg-violet-500/10 border-violet-500/20'
+                      : 'bg-blue-500/10 border-blue-500/20'
+                  }`}>
+                    <FaCalendarAlt className={`flex-shrink-0 mt-0.5 ${
+                      rs.roundType === 'assessment' ? 'text-violet-400' : 'text-blue-400'
+                    }`} />
+                    <span className={`font-medium ${
+                      rs.roundType === 'assessment' ? 'text-violet-300' : 'text-blue-300'
+                    }`}>{rs.roundName}:</span>
+                    {rs.roundType === 'assessment' ? (
+                      <span className="text-gray-300">
+                        {rs.assessmentConfig?.assessmentType} · {rs.assessmentConfig?.duration}m ·{' '}
+                        {rs.assessmentConfig?.availableFrom
+                          ? `${new Date(rs.assessmentConfig.availableFrom).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })} – ${new Date(rs.assessmentConfig.availableUntil).toLocaleString('en-IN', { timeStyle: 'short' })}`
+                          : 'Window not set'}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">
+                        {rs.interviewConfig?.scheduledAt
+                          ? new Date(rs.interviewConfig.scheduledAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                          : 'Time not set'}
+                        {rs.interviewConfig?.meetingLink && <> · <a href={rs.interviewConfig.meetingLink} target="_blank" rel="noreferrer" className="text-blue-400 underline">Join Link</a></>}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -270,14 +323,16 @@ const ApplicantCard = ({ app, job, onAction }) => {
 
           {/* Schedule Round Form */}
           {showScheduler && (
-            <form onSubmit={handleSchedule} className="bg-white/3 rounded-xl p-4 space-y-4 border border-white/10">
-              <p className="text-sm font-bold text-white">Schedule a Round</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
+            <form onSubmit={handleSchedule} className="bg-white/3 rounded-xl border border-white/10 overflow-hidden">
+              <div className="px-4 pt-4 pb-2">
+                <p className="text-sm font-bold text-white mb-3">Schedule a Round</p>
+
+                {/* Round selector */}
+                <div className="mb-3">
                   <label className="text-xs text-gray-400 mb-1 block">Round</label>
                   <select
                     value={scheduleData.roundNumber}
-                    onChange={e => setScheduleData(p => ({ ...p, roundNumber: Number(e.target.value) }))}
+                    onChange={e => handleRoundChange(e.target.value)}
                     className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
                   >
                     {(job?.rounds || []).map(r => (
@@ -285,132 +340,164 @@ const ApplicantCard = ({ app, job, onAction }) => {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block">Date & Time *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={scheduleData.scheduledAt}
-                    onChange={e => setScheduleData(p => ({ ...p, scheduledAt: e.target.value }))}
-                    className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
-                  />
+
+                {/* Round type toggle */}
+                <div className="flex rounded-xl overflow-hidden border border-white/10 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => set('roundType', 'assessment')}
+                    className={`flex-1 py-2 text-xs font-semibold transition-colors ${
+                      scheduleData.roundType === 'assessment'
+                        ? 'bg-violet-600 text-white'
+                        : 'bg-white/3 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    🧠 Online Assessment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set('roundType', 'interview')}
+                    className={`flex-1 py-2 text-xs font-semibold transition-colors ${
+                      scheduleData.roundType === 'interview'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white/3 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    🎙️ Live Interview
+                  </button>
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Venue / Link</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Office Room 3 / Google Meet link"
-                  value={scheduleData.venue}
-                  onChange={e => setScheduleData(p => ({ ...p, venue: e.target.value }))}
-                  className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Notes for candidate</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Bring your portfolio, prepare for 30 min discussion"
-                  value={scheduleData.notes}
-                  onChange={e => setScheduleData(p => ({ ...p, notes: e.target.value }))}
-                  className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500"
-                />
-              </div>
 
-              {/* Assessment Toggle */}
-              <div className="border-t border-white/10 pt-3">
-                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer mb-3">
-                  <input
-                    type="checkbox"
-                    checked={scheduleData.hasAssessment}
-                    onChange={e => setScheduleData(p => ({ ...p, hasAssessment: e.target.checked }))}
-                    className="accent-violet-500 w-4 h-4"
-                  />
-                  <span className="font-medium">Include Online Assessment for this round</span>
-                </label>
+              {/* ── ASSESSMENT FORM ── */}
+              {scheduleData.roundType === 'assessment' && (
+                <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3">
+                  <p className="text-[10px] text-violet-400 uppercase tracking-widest font-bold">Assessment Configuration</p>
 
-                {scheduleData.hasAssessment && (
-                  <div className="bg-brand-dark/60 border border-violet-500/20 rounded-xl p-3 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Assessment Type</label>
-                        <select
-                          value={scheduleData.assessmentType}
-                          onChange={e => setScheduleData(p => ({ ...p, assessmentType: e.target.value }))}
-                          className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none"
-                        >
-                          <option>Aptitude MCQ</option>
-                          <option>Technical MCQ</option>
-                          <option>Coding Round</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">No. of Questions</label>
-                        <input
-                          type="number" min="1" max="50"
-                          value={scheduleData.numQuestions}
-                          onChange={e => setScheduleData(p => ({ ...p, numQuestions: parseInt(e.target.value) }))}
-                          className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none"
-                        />
-                      </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Assessment Type</label>
+                      <select
+                        value={scheduleData.assessmentType}
+                        onChange={e => set('assessmentType', e.target.value)}
+                        className="w-full bg-brand-dark border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                      >
+                        <option>Aptitude MCQ</option>
+                        <option>Technical MCQ</option>
+                        <option>Coding Round</option>
+                      </select>
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Difficulty Distribution</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] text-emerald-400 block mb-0.5">Easy (%)</label>
-                          <input type="number" min="0" max="100" value={scheduleData.diffEasy}
-                            onChange={e => setScheduleData(p => ({ ...p, diffEasy: parseInt(e.target.value) }))}
-                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-amber-400 block mb-0.5">Medium (%)</label>
-                          <input type="number" min="0" max="100" value={scheduleData.diffMedium}
-                            onChange={e => setScheduleData(p => ({ ...p, diffMedium: parseInt(e.target.value) }))}
-                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-red-400 block mb-0.5">Hard (%)</label>
-                          <input type="number" min="0" max="100" value={scheduleData.diffHard}
-                            onChange={e => setScheduleData(p => ({ ...p, diffHard: parseInt(e.target.value) }))}
-                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
-                        </div>
-                      </div>
-                      {(scheduleData.diffEasy + scheduleData.diffMedium + scheduleData.diffHard) !== 100 && (
-                        <p className="text-[10px] text-amber-400 mt-1">⚠ Percentages should add up to 100% (Current: {scheduleData.diffEasy + scheduleData.diffMedium + scheduleData.diffHard}%)</p>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      <div>
-                        <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Duration (minutes)</label>
-                        <input type="number" min="5" value={scheduleData.duration}
-                          onChange={e => setScheduleData(p => ({ ...p, duration: parseInt(e.target.value) }))}
-                          className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1.5 text-xs text-white focus:outline-none" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Available From</label>
-                          <input type="datetime-local" value={scheduleData.startTime}
-                            onChange={e => setScheduleData(p => ({ ...p, startTime: e.target.value }))}
-                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-[10px] text-white focus:outline-none" />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Available Until</label>
-                          <input type="datetime-local" value={scheduleData.endTime}
-                            onChange={e => setScheduleData(p => ({ ...p, endTime: e.target.value }))}
-                            className="w-full bg-brand-medium/30 border border-brand-medium rounded-md px-2 py-1 text-[10px] text-white focus:outline-none" />
-                        </div>
-                      </div>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">No. of Questions</label>
+                      <input type="number" min="1" max="50" value={scheduleData.numQuestions}
+                        onChange={e => set('numQuestions', parseInt(e.target.value))}
+                        className="w-full bg-brand-dark border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none" />
                     </div>
                   </div>
-                )}
-              </div>
 
-              <div className="flex gap-2 pt-1">
-                <button type="submit" disabled={actionLoading} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Difficulty Distribution</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-emerald-400 block mb-0.5">Easy (%)</label>
+                        <input type="number" min="0" max="100" value={scheduleData.diffEasy}
+                          onChange={e => set('diffEasy', parseInt(e.target.value))}
+                          className="w-full bg-brand-dark border border-white/10 rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-amber-400 block mb-0.5">Medium (%)</label>
+                        <input type="number" min="0" max="100" value={scheduleData.diffMedium}
+                          onChange={e => set('diffMedium', parseInt(e.target.value))}
+                          className="w-full bg-brand-dark border border-white/10 rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-red-400 block mb-0.5">Hard (%)</label>
+                        <input type="number" min="0" max="100" value={scheduleData.diffHard}
+                          onChange={e => set('diffHard', parseInt(e.target.value))}
+                          className="w-full bg-brand-dark border border-white/10 rounded-md px-2 py-1 text-xs text-white focus:outline-none" />
+                      </div>
+                    </div>
+                    {(scheduleData.diffEasy + scheduleData.diffMedium + scheduleData.diffHard) !== 100 && (
+                      <p className="text-[10px] text-amber-400 mt-1">⚠ Must add up to 100% (Current: {scheduleData.diffEasy + scheduleData.diffMedium + scheduleData.diffHard}%)</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Duration (minutes)</label>
+                    <input type="number" min="5" value={scheduleData.duration}
+                      onChange={e => set('duration', parseInt(e.target.value))}
+                      className="w-full bg-brand-dark border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none" />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Assessment Availability Window</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">Available From *</label>
+                        <input type="datetime-local" required value={scheduleData.availableFrom}
+                          onChange={e => set('availableFrom', e.target.value)}
+                          className="w-full bg-brand-dark border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">Available Until *</label>
+                        <input type="datetime-local" required value={scheduleData.availableUntil}
+                          onChange={e => set('availableUntil', e.target.value)}
+                          className="w-full bg-brand-dark border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none" />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">Candidate can start anytime in this window. Once started, they get the full duration.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── INTERVIEW FORM ── */}
+              {scheduleData.roundType === 'interview' && (
+                <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3">
+                  <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Interview Details</p>
+
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Interview Date & Time *</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={scheduleData.scheduledAt}
+                      onChange={e => set('scheduledAt', e.target.value)}
+                      className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Meeting Link / Venue</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. https://meet.google.com/xyz or Office Room 3"
+                      value={scheduleData.meetingLink}
+                      onChange={e => set('meetingLink', e.target.value)}
+                      className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Notes for Candidate</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Bring resume, prepare system design topics"
+                      value={scheduleData.notes}
+                      onChange={e => set('notes', e.target.value)}
+                      className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 px-4 pb-4">
+                <button type="submit" disabled={actionLoading}
+                  className={`px-4 py-2 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${
+                    scheduleData.roundType === 'assessment'
+                      ? 'bg-violet-600 hover:bg-violet-500'
+                      : 'bg-blue-600 hover:bg-blue-500'
+                  }`}>
                   {actionLoading ? 'Saving...' : 'Send Schedule Notification'}
                 </button>
-                <button type="button" onClick={() => setShowScheduler(false)} className="px-4 py-2 text-gray-400 hover:text-white text-xs rounded-lg hover:bg-white/5 transition-colors">
+                <button type="button" onClick={() => setShowScheduler(false)}
+                  className="px-4 py-2 text-gray-400 hover:text-white text-xs rounded-lg hover:bg-white/5 transition-colors">
                   Cancel
                 </button>
               </div>
