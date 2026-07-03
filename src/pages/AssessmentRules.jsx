@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { FaExclamationTriangle, FaDesktop, FaCheckCircle, FaBan } from 'react-icons/fa';
+import { AlertTriangle, Monitor, CheckCircle2, Ban, ArrowLeft } from 'lucide-react';
 
 const AssessmentRules = () => {
   const { jobId, roundNumber } = useParams();
@@ -41,20 +41,20 @@ const AssessmentRules = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-dark">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-hv-bg">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-hv-violet border-t-transparent" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-dark px-4">
-        <div className="bg-brand-medium/20 border border-white/10 p-8 rounded-2xl max-w-lg text-center space-y-4">
-          <FaExclamationTriangle className="w-12 h-12 text-red-400 mx-auto" />
-          <h2 className="text-xl font-bold text-white">Cannot Start Assessment</h2>
-          <p className="text-gray-400">{error}</p>
-          <button onClick={() => navigate('/interviews')} className="px-6 py-2 bg-brand-purple hover:bg-opacity-90 rounded-xl font-semibold text-white mt-4">
+      <div className="flex min-h-screen items-center justify-center bg-hv-bg px-4">
+        <div className="card p-8 rounded-3xl max-w-lg text-center space-y-4">
+          <AlertTriangle className="w-12 h-12 text-hv-danger mx-auto" />
+          <h2 className="text-xl font-black text-hv-text">Cannot Start Assessment</h2>
+          <p className="text-hv-muted">{error}</p>
+          <button onClick={() => navigate('/interviews')} className="btn-primary mt-4">
             Back to Interviews
           </button>
         </div>
@@ -63,45 +63,49 @@ const AssessmentRules = () => {
   }
 
   return (
-    <div className="min-h-screen bg-brand-dark text-white px-4 py-12">
+    <div className="min-h-screen bg-hv-bg text-hv-text px-4 py-12 assessment-shell">
       <div className="max-w-2xl mx-auto space-y-8">
+        <button onClick={() => navigate('/interviews')} className="flex items-center gap-2 text-sm font-semibold text-hv-muted hover:text-hv-text">
+          <ArrowLeft size={16} /> Back to Interviews
+        </button>
+
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-extrabold text-white">Online Assessment Instructions</h1>
-          <p className="text-gray-400">Please read the following instructions carefully before starting.</p>
+          <h1 className="text-3xl font-black text-hv-text">Online Assessment Instructions</h1>
+          <p className="text-hv-muted">Please read the following instructions carefully before starting.</p>
         </div>
 
-        <div className="bg-brand-medium/20 border border-brand-purple/30 rounded-3xl p-8 space-y-6 shadow-xl shadow-brand-purple/10">
+        <div className="card p-8 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Total Questions</p>
-              <p className="text-xl font-bold text-white">{assessment.questions?.length || 0}</p>
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-hv-subtle font-bold mb-1">Total Questions</p>
+              <p className="text-xl font-black text-hv-text">{assessment.questions?.length || 0}</p>
             </div>
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Duration</p>
-              <p className="text-xl font-bold text-white">{assessment.duration} Minutes</p>
+            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-hv-subtle font-bold mb-1">Duration</p>
+              <p className="text-xl font-black text-hv-text">{assessment.duration} Minutes</p>
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-white/10">
-            <h3 className="text-lg font-bold text-brand-accent flex items-center gap-2">
-              <FaDesktop /> Secure Browser Environment
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <h3 className="text-lg font-black text-hv-violet flex items-center gap-2">
+              <Monitor size={18} /> Secure Browser Environment
             </h3>
             
-            <ul className="space-y-3 text-sm text-gray-300">
+            <ul className="space-y-3 text-sm text-hv-muted">
               <li className="flex items-start gap-3">
-                <FaCheckCircle className="text-emerald-400 mt-1 flex-shrink-0" />
+                <CheckCircle2 className="text-hv-success mt-1 flex-shrink-0" size={16} />
                 <p>The test will launch in <strong>Fullscreen Mode</strong>. Exiting fullscreen will be recorded as a violation.</p>
               </li>
               <li className="flex items-start gap-3">
-                <FaBan className="text-red-400 mt-1 flex-shrink-0" />
+                <Ban className="text-hv-danger mt-1 flex-shrink-0" size={16} />
                 <p><strong>Do not switch tabs or windows.</strong> Tab navigation is actively monitored and will reduce your Trust Score.</p>
               </li>
               <li className="flex items-start gap-3">
-                <FaBan className="text-red-400 mt-1 flex-shrink-0" />
+                <Ban className="text-hv-danger mt-1 flex-shrink-0" size={16} />
                 <p><strong>Copying and pasting</strong> is disabled and monitored. Attempting to paste external code will flag your submission.</p>
               </li>
               <li className="flex items-start gap-3">
-                <FaExclamationTriangle className="text-amber-400 mt-1 flex-shrink-0" />
+                <AlertTriangle className="text-hv-warning mt-1 flex-shrink-0" size={16} />
                 <p>If your Trust Score drops too low due to violations, your assessment may be disqualified by the employer.</p>
               </li>
             </ul>
@@ -110,11 +114,11 @@ const AssessmentRules = () => {
           <div className="pt-6">
             <button
               onClick={handleStart}
-              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-extrabold rounded-xl text-lg shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+              className="btn-primary w-full py-3.5 text-base"
             >
               Agree & Start Assessment
             </button>
-            <p className="text-center text-xs text-gray-500 mt-3">
+            <p className="text-center text-xs text-hv-subtle mt-3">
               By clicking this button, you agree to the proctoring rules and will enter fullscreen mode.
             </p>
           </div>

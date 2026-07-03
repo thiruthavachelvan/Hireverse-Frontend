@@ -3,14 +3,12 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaClock, FaMapMarkerAlt, FaFileAlt, FaBuilding,
-  FaChevronRight, FaLaptopCode, FaVideo, FaLock
-} from 'react-icons/fa';
-import { MdVerified } from 'react-icons/md';
+  Calendar, Clock, MapPin, FileText, Building2,
+  ChevronRight, Laptop, Video, Lock, Sparkles, CheckCircle2
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
-// ─────────────────────────────────────────────
-// Assessment Round Card
-// ─────────────────────────────────────────────
+// ─── Assessment Round Card ──────────────────────────────────────
 const AssessmentCard = ({ int }) => {
   const cfg = int.assessmentConfig || int.assessmentDetails || {};
   const availableFrom  = cfg.availableFrom  || cfg.startTime;
@@ -34,39 +32,42 @@ const AssessmentCard = ({ int }) => {
   const canStart = isInWindow && isCurrentRound && !isApplicationRejected && !isApplicationHired && !isCompleted;
 
   return (
-    <div className={`glassmorphism p-6 rounded-2xl border transition-all ${
+    <div className={`card p-6 border ${
       isCurrentRound && !isApplicationRejected && !isApplicationHired && !isCompleted
-        ? 'border-violet-500/40 ring-1 ring-violet-500/20'
-        : 'border-white/5'
+        ? 'border-violet-300 shadow-md bg-violet-50/5'
+        : 'bg-white'
     }`}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
         <div className="flex items-start gap-4">
-          <img src={int.companyLogo} alt={int.companyName}
-            className="w-12 h-12 rounded border border-brand-accent bg-brand-medium object-contain flex-shrink-0" />
+          <img src={int.companyLogo || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(int.companyName || '')}`} alt=""
+            className="w-12 h-12 rounded-xl border border-gray-100 bg-gray-50 object-contain flex-shrink-0" />
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-white">{int.companyName}</span>
-              {int.isCompanyVerified && <MdVerified className="text-brand-accent w-4 h-4" />}
+              <span className="font-bold text-hv-text text-sm">{int.companyName}</span>
+              {int.isCompanyVerified && (
+                <span className="chip chip-success text-[8px] px-1 py-0 leading-none">Verified Partner</span>
+              )}
             </div>
-            <h3 className="text-lg font-bold text-violet-400 mt-0.5">
+            <h3 className="text-base font-extrabold text-hv-violet mt-0.5 hover:opacity-85 transition-opacity">
               <Link to={`/jobs/${int.jobId}`}>{int.jobTitle}</Link>
             </h3>
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <span className="text-xs bg-violet-600/20 text-violet-300 border border-violet-500/25 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                <FaLaptopCode className="w-3 h-3" /> {int.roundName}
+            
+            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+              <span className="chip chip-violet font-semibold text-[10px]">
+                <Laptop size={11} /> {int.roundName}
               </span>
-              <span className="text-xs bg-violet-600/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full">
+              <span className="chip chip-gray font-bold text-[10px]">
                 {assessmentType}
               </span>
               {isCompleted ? (
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <span className="chip chip-success text-[10px]">
                   Completed ✓
                 </span>
               ) : (
                 isCurrentRound && !isApplicationRejected && !isApplicationHired && (
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Current Round
+                  <span className="chip chip-success text-[10px] animate-pulse">
+                    Current Stage
                   </span>
                 )
               )}
@@ -74,28 +75,28 @@ const AssessmentCard = ({ int }) => {
           </div>
         </div>
 
-        {/* Timer info */}
-        <div className="flex flex-col gap-2 items-start md:items-end text-xs text-gray-400 bg-brand-medium/10 md:bg-transparent p-3 md:p-0 rounded-xl">
+        {/* Timer stats details */}
+        <div className="flex flex-col gap-1.5 items-start md:items-end text-xs text-hv-muted">
           {isCompleted ? (
             <>
-              <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+              <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
                 <span>Completed ✓</span>
               </div>
               {int.attemptId?.submittedAt && (
-                <div className="text-[10px] text-gray-400">
+                <div className="text-[10px] text-hv-subtle font-semibold uppercase">
                   Submitted: {new Date(int.attemptId.submittedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                 </div>
               )}
             </>
           ) : (
             <>
-              <div className="flex items-center gap-1.5 text-white font-medium">
-                <FaClock className="text-violet-400" />
-                <span>Duration: {duration} minutes</span>
+              <div className="flex items-center gap-1.5 font-bold text-hv-text">
+                <Clock size={13} className="text-hv-violet" />
+                <span>Duration: {duration} mins</span>
               </div>
               {from && (
-                <div className="flex items-center gap-1.5">
-                  <FaCalendarAlt className="text-violet-400 flex-shrink-0" />
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold">
+                  <Calendar size={13} className="text-hv-violet flex-shrink-0" />
                   <span>
                     {from.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                     {' – '}
@@ -103,20 +104,20 @@ const AssessmentCard = ({ int }) => {
                   </span>
                 </div>
               )}
-              {/* Window status badge */}
+              {/* Window status pill */}
               {isBeforeWindow && (
-                <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-full font-medium">
-                  ⏳ Opens {from.toLocaleString('en-IN', { timeStyle: 'short' })}
+                <span className="text-[10px] font-bold uppercase chip chip-warning mt-1.5">
+                  Opens {from.toLocaleString('en-IN', { timeStyle: 'short' })}
                 </span>
               )}
               {isInWindow && from && (
-                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-full font-medium animate-pulse">
-                  ✅ Window Open Now
+                <span className="text-[10px] font-bold uppercase chip chip-success mt-1.5 animate-pulse">
+                  Window Active Now
                 </span>
               )}
               {isAfterWindow && (
-                <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-full font-medium">
-                  ❌ Window Closed
+                <span className="text-[10px] font-bold uppercase chip chip-danger mt-1.5">
+                  Closed
                 </span>
               )}
             </>
@@ -124,38 +125,35 @@ const AssessmentCard = ({ int }) => {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-        <p className="text-xs text-gray-500">
+      {/* Footer block */}
+      <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center gap-4 flex-wrap">
+        <p className="text-xs text-hv-muted leading-relaxed max-w-sm">
           {isCompleted 
-            ? 'You have finished this evaluation round.' 
-            : !from ? 'Availability window not set yet.' : `Start any time during the window — you'll get ${duration} mins.`}
+            ? 'Evaluation round finished successfully.' 
+            : !from ? 'Waiting for company availability window.' : `Start any time during the window — test duration is ${duration} mins.`}
         </p>
+        
         {isCompleted ? (
-          <button disabled
-            className="px-5 py-2.5 bg-emerald-500/20 text-emerald-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
+          <button disabled className="btn-ghost py-2 text-xs opacity-70 cursor-not-allowed">
             Completed ✓
           </button>
         ) : (
           isCurrentRound && !isApplicationRejected && !isApplicationHired && (
             canStart ? (
               <Link to={`/assessment/job/${int.jobId}/round/${int.roundNumber}/rules`}
-                className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/20 transition-all text-sm flex items-center gap-2">
-                <FaLaptopCode /> Start Test
+                className="btn-primary py-2 text-xs flex items-center gap-1 shadow-violet-200">
+                <Laptop size={14} /> Start Test
               </Link>
             ) : isBeforeWindow ? (
-              <button disabled
-                className="px-5 py-2.5 bg-amber-500/20 text-amber-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
-                <FaLock /> Not Yet Open
+              <button disabled className="btn-ghost py-2 text-xs opacity-60 cursor-not-allowed">
+                <Lock size={12} /> Locked
               </button>
             ) : isAfterWindow ? (
-              <button disabled
-                className="px-5 py-2.5 bg-red-500/20 text-red-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
-                Window Closed
+              <button disabled className="btn-ghost py-2 text-xs opacity-60 cursor-not-allowed">
+                Expired
               </button>
             ) : (
-              <button disabled
-                className="px-5 py-2.5 bg-gray-500/20 text-gray-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
+              <button disabled className="btn-ghost py-2 text-xs opacity-60 cursor-not-allowed">
                 Start Test
               </button>
             )
@@ -166,9 +164,7 @@ const AssessmentCard = ({ int }) => {
   );
 };
 
-// ─────────────────────────────────────────────
-// Interview Round Card
-// ─────────────────────────────────────────────
+// ─── Interview Round Card ──────────────────────────────────────
 const InterviewCard = ({ int }) => {
   const cfg = int.interviewConfig || {};
   const scheduledAt = cfg.scheduledAt ? new Date(cfg.scheduledAt) : (int.scheduledAt ? new Date(int.scheduledAt) : null);
@@ -179,39 +175,41 @@ const InterviewCard = ({ int }) => {
   const isApplicationHired    = int.applicationStatus === 'hired';
   const isCurrentRound        = int.currentRound === int.roundNumber;
 
-  const dateStr = scheduledAt?.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const dateStr = scheduledAt?.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   const timeStr = scheduledAt?.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className={`glassmorphism p-6 rounded-2xl border transition-all ${
+    <div className={`card p-6 border ${
       isCurrentRound && !isApplicationRejected && !isApplicationHired
-        ? 'border-blue-500/40 ring-1 ring-blue-500/20'
-        : 'border-white/5'
+        ? 'border-violet-300 shadow-md'
+        : 'bg-white'
     }`}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
         <div className="flex items-start gap-4">
-          <img src={int.companyLogo} alt={int.companyName}
-            className="w-12 h-12 rounded border border-brand-accent bg-brand-medium object-contain flex-shrink-0" />
+          <img src={int.companyLogo || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(int.companyName || '')}`} alt=""
+            className="w-12 h-12 rounded-xl border border-gray-100 bg-gray-50 object-contain flex-shrink-0" />
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-white">{int.companyName}</span>
-              {int.isCompanyVerified && <MdVerified className="text-brand-accent w-4 h-4" />}
+              <span className="font-bold text-hv-text text-sm">{int.companyName}</span>
+              {int.isCompanyVerified && (
+                <span className="chip chip-success text-[8px] px-1 py-0 leading-none">Verified Partner</span>
+              )}
             </div>
-            <h3 className="text-lg font-bold text-blue-400 mt-0.5">
+            <h3 className="text-base font-extrabold text-hv-violet mt-0.5 hover:opacity-85 transition-opacity">
               <Link to={`/jobs/${int.jobId}`}>{int.jobTitle}</Link>
             </h3>
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <span className="text-xs bg-blue-600/20 text-blue-300 border border-blue-500/25 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                <FaVideo className="w-3 h-3" /> {int.roundName}
+            <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+              <span className="chip chip-violet font-semibold text-[10px]">
+                <Video size={11} /> {int.roundName}
               </span>
               {isCurrentRound && !isApplicationRejected && !isApplicationHired && (
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Current Round
+                <span className="chip chip-success text-[10px] animate-pulse">
+                  Current Stage
                 </span>
               )}
               {isApplicationRejected && (
-                <span className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-medium">
+                <span className="chip chip-danger text-[10px]">
                   Application Closed
                 </span>
               )}
@@ -219,55 +217,55 @@ const InterviewCard = ({ int }) => {
           </div>
         </div>
 
-        {/* Schedule info */}
-        <div className="flex flex-col gap-2 items-start md:items-end text-xs text-gray-400 bg-brand-medium/10 md:bg-transparent p-3 md:p-0 rounded-xl">
+        {/* Schedule metadata details */}
+        <div className="flex flex-col gap-1.5 items-start md:items-end text-xs text-hv-muted">
           {scheduledAt ? (
             <>
-              <div className="flex items-center gap-1.5 text-white font-medium">
-                <FaCalendarAlt className="text-blue-400" />
+              <div className="flex items-center gap-1.5 font-bold text-hv-text">
+                <Calendar size={13} className="text-hv-violet" />
                 <span>{dateStr}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <FaClock className="text-blue-400" />
+              <div className="flex items-center gap-1.5 font-semibold">
+                <Clock size={13} className="text-hv-violet" />
                 <span>{timeStr} IST</span>
               </div>
             </>
           ) : (
-            <span className="text-gray-500 italic">Schedule not set yet</span>
+            <span className="text-hv-subtle italic">Waiting for schedule times</span>
           )}
           {meetingLink && (
-            <div className="flex items-center gap-1.5 text-gray-300">
-              <FaMapMarkerAlt className="text-blue-400 flex-shrink-0" />
-              <span className="truncate max-w-[200px]">{meetingLink}</span>
+            <div className="flex items-center gap-1 text-hv-subtle font-medium mt-1 truncate max-w-[200px]">
+              <MapPin size={11} className="flex-shrink-0" />
+              <span className="truncate">{meetingLink}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Notes box */}
+      {/* Notes block */}
       {notes && (
-        <div className="mt-4 bg-brand-medium/20 border border-white/5 rounded-xl p-3 flex gap-2.5 items-start">
-          <FaFileAlt className="text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="mt-4 bg-gray-50 border border-gray-100 rounded-xl p-3 flex gap-2.5 items-start">
+          <FileText size={15} className="text-hv-violet flex-shrink-0 mt-0.5" />
           <div className="text-xs">
-            <p className="font-semibold text-gray-400 uppercase tracking-wider text-[10px] mb-1">Interview Instructions</p>
-            <p className="text-gray-200 leading-relaxed">{notes}</p>
+            <p className="font-bold text-hv-subtle uppercase tracking-wider text-[9px] mb-1">Recruiter Notes</p>
+            <p className="text-hv-muted leading-relaxed">{notes}</p>
           </div>
         </div>
       )}
 
       {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs">
-        <span className="text-gray-500">Scheduled on HireVerse</span>
+      <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center gap-4 flex-wrap text-xs">
+        <span className="text-hv-subtle font-semibold">Interviews scheduled on HireVerse</span>
         <div className="flex items-center gap-3">
           {meetingLink && (
             <a href={meetingLink} target="_blank" rel="noreferrer"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition-colors">
-              <FaVideo /> Join Interview
+              className="btn-primary py-2 text-xs flex items-center gap-1">
+              <Video size={13} /> Join Call
             </a>
           )}
           <Link to="/my-applications"
-            className="text-brand-accent hover:text-brand-purple font-semibold flex items-center gap-1 transition-colors">
-            Full Progress <FaChevronRight className="w-2.5 h-2.5" />
+            className="text-hv-violet font-bold flex items-center gap-0.5 hover:opacity-80 transition-opacity">
+            Full Progress <ChevronRight size={13} />
           </Link>
         </div>
       </div>
@@ -275,9 +273,7 @@ const InterviewCard = ({ int }) => {
   );
 };
 
-// ─────────────────────────────────────────────
-// Main Interviews Page
-// ─────────────────────────────────────────────
+// ─── Main Interviews Page ────────────────────────────────────────
 const Interviews = () => {
   const { user } = useAuth();
   const [interviews, setInterviews] = useState([]);
@@ -313,19 +309,15 @@ const Interviews = () => {
                 isCompanyVerified: company.verificationStatus === 'verified',
                 roundName:         schedule.roundName || `Round ${schedule.roundNumber}`,
                 roundNumber:       schedule.roundNumber,
-                // Round type from new schema, fallback to detecting from hasAssessment
                 roundType:         schedule.roundType || (schedule.hasAssessment ? 'assessment' : 'interview'),
-                // New schema fields
                 assessmentConfig:  schedule.assessmentConfig,
                 interviewConfig:   schedule.interviewConfig,
-                // Legacy fallback fields
                 assessmentDetails: schedule.assessmentDetails,
                 scheduledAt:       schedule.interviewConfig?.scheduledAt || schedule.scheduledAt,
                 venue:             schedule.interviewConfig?.meetingLink  || schedule.venue || '',
                 notes:             schedule.interviewConfig?.notes        || schedule.notes || '',
                 applicationStatus: app.status,
                 currentRound:      app.currentRound,
-                // New fields for completion status
                 status:            schedule.status || 'Scheduled',
                 assessmentCompleted: schedule.assessmentCompleted || false,
                 attemptId:         schedule.attemptId || null,
@@ -334,7 +326,7 @@ const Interviews = () => {
           }
         });
 
-        // Sort: assessment rounds by availableFrom, interview by scheduledAt
+        // Sort schedules
         allSchedules.sort((a, b) => {
           const aDate = a.roundType === 'assessment'
             ? new Date(a.assessmentConfig?.availableFrom || 0)
@@ -357,15 +349,19 @@ const Interviews = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[80vh] items-center justify-center bg-brand-dark">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-purple border-t-transparent" />
+      <div className="flex min-h-[80vh] items-center justify-center bg-hv-bg">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="w-10 h-10 rounded-full border-2 border-transparent"
+          style={{ borderTopColor: '#8B5CF6', borderRightColor: '#FF6B6B' }}
+        />
       </div>
     );
   }
 
   const now = new Date();
 
-  // "upcoming" = assessment windows not yet closed OR interview not yet passed
   const upcoming = interviews.filter(int => {
     if (int.roundType === 'assessment') {
       const until = int.assessmentConfig?.availableUntil || int.assessmentDetails?.endTime;
@@ -387,48 +383,52 @@ const Interviews = () => {
   const displayed = activeTab === 'upcoming' ? upcoming : past;
 
   return (
-    <div className="min-h-screen bg-brand-dark text-white px-4 md:px-8 py-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen px-4 md:px-8 py-8 relative">
+      <div className="mesh-blob-1 animate-blob-1" style={{ top: '-10%', left: '-10%' }} />
+      <div className="mesh-blob-2 animate-blob-2" style={{ bottom: '-10%', right: '-10%' }} />
 
-        <div className="border-b border-brand-medium/50 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="max-w-4xl mx-auto space-y-6 relative z-10">
+
+        <div className="border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-white">Interview Rounds</h1>
-            <p className="text-sm text-gray-400 mt-1">Track your scheduled evaluations and online tests.</p>
+            <h1 className="text-3xl font-black text-hv-text">Workspace Rounds</h1>
+            <p className="text-sm text-hv-muted mt-1 font-medium">Coordinate upcoming technical MCQs, coding challenges, and panel interviews.</p>
           </div>
-          <div className="flex bg-brand-medium/30 p-1 rounded-xl border border-white/5">
+          <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
             <button onClick={() => setActiveTab('upcoming')}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'upcoming' ? 'bg-brand-purple text-white shadow-md' : 'text-gray-400 hover:text-white'
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'upcoming' ? 'bg-white text-hv-violet shadow-sm' : 'text-hv-muted hover:text-hv-text'
               }`}>
               Upcoming ({upcoming.length})
             </button>
             <button onClick={() => setActiveTab('past')}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'past' ? 'bg-brand-purple text-white shadow-md' : 'text-gray-400 hover:text-white'
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'past' ? 'bg-white text-hv-violet shadow-sm' : 'text-hv-muted hover:text-hv-text'
               }`}>
-              Past ({past.length})
+              History ({past.length})
             </button>
           </div>
         </div>
 
         {error && (
-          <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm text-center">{error}</div>
+          <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm text-center">{error}</div>
         )}
 
         {displayed.length === 0 ? (
-          <div className="glassmorphism p-12 rounded-2xl text-center text-gray-400">
-            <FaCalendarAlt className="w-12 h-12 mx-auto mb-4 text-gray-600 animate-pulse" />
-            <p className="text-lg font-bold">No {activeTab} rounds found</p>
-            <p className="text-sm mt-1">
-              {activeTab === 'upcoming'
-                ? 'Your scheduled rounds and assessments will appear here once companies invite you.'
-                : 'Any past completed interview rounds will be saved here.'}
-            </p>
-            {activeTab === 'upcoming' && (
-              <p className="text-xs mt-3 text-gray-500">
-                Browse jobs at the{' '}
-                <Link to="/jobs" className="text-brand-purple hover:underline">Jobs Section</Link>.
+          <div className="card p-16 text-center max-w-md mx-auto space-y-4">
+            <Calendar className="w-16 h-16 text-hv-subtle mx-auto animate-float" />
+            <div>
+              <p className="text-lg font-bold text-hv-text">No {activeTab} rounds scheduled</p>
+              <p className="text-sm text-hv-muted mt-1 leading-relaxed">
+                {activeTab === 'upcoming'
+                  ? 'Your scheduled tests and calls will appear here when recruiters schedule updates.'
+                  : 'Your past interview sessions and test attempts will be cataloged here.'}
               </p>
+            </div>
+            {activeTab === 'upcoming' && (
+              <Link to="/jobs" className="btn-primary inline-flex py-2.5 text-xs">
+                Browse Active Jobs <Sparkles size={13} />
+              </Link>
             )}
           </div>
         ) : (

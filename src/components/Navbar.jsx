@@ -1,46 +1,55 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
-  FaBriefcase, FaUser, FaHome, FaSignOutAlt, FaClipboardList,
-  FaBell, FaShieldAlt, FaCheckCircle, FaClock, FaCalendarAlt,
-  FaBuilding,
-} from 'react-icons/fa';
-import { MdAdminPanelSettings } from 'react-icons/md';
+  Bell, LogOut, CheckCircle, Clock, Search, X,
+  Briefcase, Calendar, Handshake, Trophy, ChevronRight
+} from 'lucide-react';
+import { HLogo } from './AppLoader';
 
-const VerificationBadge = ({ status }) => {
-  if (status === 'verified') return (
-    <span className="flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-      <FaCheckCircle className="w-2.5 h-2.5" /> Verified
-    </span>
-  );
-  if (status === 'pending') return (
-    <span className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
-      <FaClock className="w-2.5 h-2.5" /> Pending
-    </span>
-  );
-  return null;
+const notifIcons = {
+  application_received: <Briefcase size={14} className="text-violet-500" />,
+  application_accepted: <CheckCircle size={14} className="text-emerald-500" />,
+  application_rejected: <X size={14} className="text-red-400" />,
+  round_scheduled:      <Calendar size={14} className="text-violet-500" />,
+  round_advanced:       <Handshake size={14} className="text-sky-500" />,
+  hired:                <Trophy size={14} className="text-amber-500" />,
+  job_posted:           <Briefcase size={14} className="text-coral-500" />,
+};
+
+const timeAgo = (date) => {
+  const diff = Date.now() - new Date(date).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 };
 
 const Navbar = () => {
-  const { user, logout, unreadCount, refreshUnreadCount, isAdmin, isCompany, isProfessional } = useAuth();
+  const { user, logout, unreadCount, refreshUnreadCount, isAdmin, isCompany } = useAuth();
   const navigate = useNavigate();
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
+  // Track scroll for navbar appearance change
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowNotifDropdown(false);
+        setShowNotif(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -58,185 +67,187 @@ const Navbar = () => {
   };
 
   const handleBellClick = async () => {
-    if (!showNotifDropdown) {
+    if (!showNotif) {
       await fetchNotifications();
-      // Mark all as read
       try {
         await api.put('/notifications/read-all');
         refreshUnreadCount();
       } catch { /* ignore */ }
     }
-    setShowNotifDropdown(v => !v);
+    setShowNotif(v => !v);
   };
 
-  const timeAgo = (date) => {
-    const diff = Date.now() - new Date(date).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
-    <nav className="sticky top-0 z-50 glassmorphism shadow-md px-6 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center space-x-2 text-2xl font-bold tracking-wider text-white">
-          <span className="text-brand-purple">Hire</span>
-          <span className="gradient-text">Verse</span>
+    <motion.nav
+      animate={{
+        boxShadow: scrolled
+          ? '0 4px 24px rgba(0,0,0,0.08)'
+          : '0 1px 3px rgba(0,0,0,0.04)',
+      }}
+      transition={{ duration: 0.3 }}
+      className="sticky top-0 z-50 w-full"
+      style={{
+        background: scrolled
+          ? 'rgba(255,255,255,0.95)'
+          : 'rgba(248,248,252,0.9)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(0,0,0,0.05)',
+      }}
+    >
+      <div className="max-w-screen-2xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+
+        {/* Left: Logo (shown only on public pages or when sidebar is not visible) */}
+        <Link
+          to={user ? (isCompany ? '/dashboard' : isAdmin ? '/admin' : '/feed') : '/'}
+          className="flex items-center gap-2.5 flex-shrink-0"
+        >
+          <HLogo size={36} />
+          <span className="font-black text-lg gradient-text hidden sm:block">HireVerse</span>
         </Link>
 
-        {/* Navigation Links */}
-        <div className="flex items-center space-x-5">
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 ml-auto">
+
           {!user ? (
+            /* Unauthenticated */
             <>
-              <Link to="/login" className="text-gray-300 hover:text-white font-medium transition-colors">
+              <Link
+                to="/login"
+                className="text-sm font-semibold text-hv-muted hover:text-hv-text px-4 py-2 rounded-xl transition-colors"
+              >
                 Login
               </Link>
-              <Link
-                to="/register"
-                className="bg-brand-purple hover:bg-opacity-90 text-white font-medium px-5 py-2 rounded-lg shadow-lg transition-all"
-              >
+              <Link to="/register" className="btn-primary text-sm px-5 py-2.5">
                 Join Now
               </Link>
             </>
           ) : (
             <>
-              {/* Admin links */}
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors"
-                >
-                  <MdAdminPanelSettings className="text-violet-400 text-lg" />
-                  <span className="hidden sm:inline">Admin</span>
-                </Link>
-              )}
-
-              {/* Professional links */}
-              {isProfessional && (
-                <>
-                  <Link to="/feed" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaHome className="text-brand-purple" />
-                    <span className="hidden sm:inline">Feed</span>
-                  </Link>
-                  <Link to="/companies" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaBuilding className="text-brand-purple" />
-                    <span className="hidden sm:inline">Companies</span>
-                  </Link>
-                  <Link to="/jobs" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaBriefcase className="text-brand-purple" />
-                    <span className="hidden sm:inline">Jobs</span>
-                  </Link>
-                  <Link to="/my-applications" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaClipboardList className="text-brand-purple" />
-                    <span className="hidden sm:inline">Applications</span>
-                  </Link>
-                  <Link to="/interviews" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaCalendarAlt className="text-brand-purple" />
-                    <span className="hidden sm:inline">Interviews</span>
-                  </Link>
-                  <Link to="/profile" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaUser className="text-brand-purple" />
-                    <span className="hidden sm:inline">Profile</span>
-                  </Link>
-                </>
-              )}
-
-              {/* Company links */}
-              {isCompany && (
-                <>
-                  <Link to="/dashboard" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaBriefcase className="text-brand-purple" />
-                    <span className="hidden sm:inline">Manage Jobs</span>
-                  </Link>
-                  <Link to="/profile" className="flex items-center space-x-1 text-gray-300 hover:text-white font-medium transition-colors">
-                    <FaUser className="text-brand-purple" />
-                    <span className="hidden sm:inline">Profile</span>
-                  </Link>
-                </>
-              )}
-
               {/* Notification Bell */}
               {!isAdmin && (
                 <div className="relative" ref={dropdownRef}>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
                     onClick={handleBellClick}
-                    className="relative text-gray-300 hover:text-white transition-colors p-1"
+                    className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors"
                     title="Notifications"
                   >
-                    <FaBell className="w-5 h-5" />
+                    <Bell size={18} className="text-hv-muted" />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-0.5 -right-0.5 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold animate-pulse-glow"
+                        style={{ background: 'linear-gradient(135deg, #FF6B6B, #8B5CF6)' }}
+                      >
                         {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
+                      </motion.span>
                     )}
-                  </button>
+                  </motion.button>
 
-                  {showNotifDropdown && (
-                    <div className="absolute right-0 mt-2 w-80 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
-                      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-                        <span className="font-semibold text-white text-sm">Notifications</span>
-                        <Link
-                          to="/notifications"
-                          className="text-xs text-violet-400 hover:text-violet-300"
-                          onClick={() => setShowNotifDropdown(false)}
-                        >
-                          View all
-                        </Link>
-                      </div>
-                      {notifLoading ? (
-                        <div className="p-4 text-center text-gray-400 text-sm">Loading...</div>
-                      ) : notifications.length === 0 ? (
-                        <div className="p-6 text-center text-gray-400 text-sm">No notifications yet</div>
-                      ) : (
-                        <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
-                          {notifications.map(n => (
-                            <div key={n._id} className={`px-4 py-3 hover:bg-white/5 transition-colors ${!n.isRead ? 'bg-violet-500/5' : ''}`}>
-                              <p className="text-sm font-medium text-white">{n.title}</p>
-                              <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{n.message}</p>
-                              <p className="text-xs text-gray-500 mt-1">{timeAgo(n.createdAt)}</p>
-                            </div>
-                          ))}
+                  <AnimatePresence>
+                    {showNotif && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                        transition={{ duration: 0.18 }}
+                        className="absolute right-0 mt-2 w-80 card-static overflow-hidden z-50"
+                        style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}
+                      >
+                        <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
+                          <span className="font-bold text-hv-text text-sm">Notifications</span>
+                          <Link
+                            to="/notifications"
+                            onClick={() => setShowNotif(false)}
+                            className="text-xs font-semibold text-hv-violet hover:opacity-75 flex items-center gap-1"
+                          >
+                            View all <ChevronRight size={12} />
+                          </Link>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {notifLoading ? (
+                          <div className="p-4 space-y-3">
+                            {[1,2,3].map(i => <div key={i} className="skeleton h-10 rounded-lg" />)}
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="p-8 text-center">
+                            <Bell size={28} className="text-gray-200 mx-auto mb-2" />
+                            <p className="text-sm text-hv-muted">No notifications yet</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+                            {notifications.map(n => (
+                              <motion.div
+                                key={n._id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer ${
+                                  !n.isRead ? 'bg-violet-50/50' : ''
+                                }`}
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    {notifIcons[n.type] || <Bell size={12} className="text-gray-400" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-hv-text truncate">{n.title}</p>
+                                    <p className="text-xs text-hv-muted mt-0.5 leading-relaxed line-clamp-2">{n.message}</p>
+                                    <p className="text-xs text-hv-subtle mt-1">{timeAgo(n.createdAt)}</p>
+                                  </div>
+                                  {!n.isRead && (
+                                    <div className="w-2 h-2 rounded-full bg-hv-violet flex-shrink-0 mt-1.5" />
+                                  )}
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 
-              {/* User Avatar & Logout */}
-              <div className="flex items-center space-x-3 ml-1 pl-4 border-l border-brand-medium">
-                <div className="flex items-center space-x-2">
-                  <img
-                    src={user.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.name}`}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full border border-brand-purple bg-brand-medium"
-                  />
-                  <div className="hidden md:flex flex-col text-left">
-                    <span className="text-sm font-semibold text-white leading-tight">{user.name}</span>
-                    {isCompany ? (
-                      <VerificationBadge status={user.verificationStatus} />
-                    ) : (
-                      <span className="text-xs text-gray-400 capitalize">{user.accountType}</span>
-                    )}
-                  </div>
+              {/* Profile pill */}
+              <Link
+                to="/profile"
+                className="flex items-center gap-2.5 pl-3 pr-4 py-1.5 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100"
+              >
+                <img
+                  src={
+                    user.profileImage ||
+                    `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name || 'user')}`
+                  }
+                  alt={user.name}
+                  className="w-7 h-7 rounded-lg object-cover"
+                  style={{ border: '1.5px solid rgba(139,92,246,0.3)' }}
+                />
+                <div className="hidden sm:block text-left">
+                  <p className="text-xs font-bold text-hv-text leading-tight max-w-24 truncate">{user.name}</p>
+                  <p className="text-[10px] text-hv-muted capitalize">{user.accountType}</p>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-400 hover:text-red-400 transition-colors p-1"
-                  title="Logout"
-                >
-                  <FaSignOutAlt className="w-5 h-5" />
-                </button>
-              </div>
+              </Link>
+
+              {/* Logout */}
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={handleLogout}
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-red-50 text-hv-subtle hover:text-red-400 transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </motion.button>
             </>
           )}
         </div>
       </div>
-    </nav>
+    </motion.nav>
   );
 };
 

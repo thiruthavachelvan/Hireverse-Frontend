@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FaUserFriends, FaThumbsUp, FaCommentAlt,
-  FaUserPlus, FaUserMinus, FaBuilding, FaCheck
-} from 'react-icons/fa';
-import { MdVerified } from 'react-icons/md';
+  Users, ThumbsUp, MessageSquare, UserPlus, UserMinus,
+  Building, CheckCircle2, Send, Sparkles, Plus
+} from 'lucide-react';
+import { SkeletonPostCard } from '../components/SkeletonLoader';
 
 const ProfessionalFeed = () => {
   const { user, handleFollowToggle } = useAuth();
@@ -33,7 +34,7 @@ const ProfessionalFeed = () => {
       setPosts(postsRes.data);
       setSuggestedUsers(usersRes.data);
     } catch (err) {
-      setError('Failed to fetch dashboard data.');
+      setError('Failed to fetch feed data.');
     }
     setLoading(false);
   };
@@ -77,94 +78,100 @@ const ProfessionalFeed = () => {
       const res = await api.post(url);
       if (res.data.requestPending) {
         setRequestedIds(prev => [...prev, targetId]);
-        alert('Connection request sent!');
       } else if (res.data.following) {
         handleFollowToggle(res.data.following);
       }
     } catch (err) {
-      if (err.response?.status === 400) {
-        if (err.response.data.message.includes('pending')) {
-          setRequestedIds(prev => [...prev, targetId]);
-        }
-        alert(err.response.data.message);
+      if (err.response?.status === 400 && err.response.data.message.includes('pending')) {
+        setRequestedIds(prev => [...prev, targetId]);
       }
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[80vh] items-center justify-center bg-brand-dark">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-purple border-t-transparent" />
-      </div>
-    );
-  }
+  const timeAgo = (date) => {
+    const diff = Date.now() - new Date(date).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
 
   return (
-    <div className="min-h-screen bg-brand-dark text-white px-4 md:px-8 py-8">
+    <div className="min-h-screen px-4 md:px-8 py-8 relative">
+      <div className="mesh-blob-1 animate-blob-1" style={{ top: '-10%', left: '-10%' }} />
+      <div className="mesh-blob-2 animate-blob-2" style={{ bottom: '-10%', right: '-10%' }} />
+
       {error && (
-        <div className="max-w-6xl mx-auto mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-center text-sm">
-          {error}
-          <button className="ml-4 underline" onClick={() => setError('')}>Dismiss</button>
+        <div className="max-w-6xl mx-auto mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-center text-sm font-semibold flex justify-between items-center z-10 relative">
+          <span>{error}</span>
+          <button className="underline font-bold text-xs" onClick={() => setError('')}>Dismiss</button>
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Profile Card */}
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8 relative z-10">
+        
+        {/* Left: Mini Profile Card */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="glassmorphism p-6 rounded-2xl text-center flex flex-col items-center">
-            <img
-              src={user.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.name}`}
-              alt={user.name}
-              className="w-20 h-20 rounded-full border-2 border-brand-purple mb-4 bg-brand-medium"
-            />
-            <Link to="/profile" className="text-xl font-bold hover:text-brand-accent transition-colors">{user.name}</Link>
-            <p className="text-sm text-gray-400 mt-1">{user.headline || 'Add a headline to your profile'}</p>
+          <div className="card p-6 text-center flex flex-col items-center">
+            <div className="w-20 h-20 rounded-2xl border-4 border-white bg-white shadow-md overflow-hidden mb-4 relative flex-shrink-0">
+              <img
+                src={user.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}`}
+                alt={user.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <Link to="/profile" className="text-lg font-black text-hv-text hover:text-hv-violet transition-colors">{user.name}</Link>
+            <p className="text-xs font-semibold text-hv-muted mt-1 leading-snug">{user.headline || 'Add a headline to your profile'}</p>
             
             {user.employmentStatus && (
-              <span className={`mt-2 text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                user.employmentStatus === 'employed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                user.employmentStatus === 'recently_left' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                'bg-blue-500/20 text-blue-400 border-blue-500/30'
+              <span className={`mt-3 text-[10px] uppercase font-bold chip ${
+                user.employmentStatus === 'employed' ? 'chip-success' :
+                user.employmentStatus === 'recently_left' ? 'chip-warning' :
+                'chip-blue'
               }`}>
                 {user.employmentStatus === 'employed' ? 'Employed' :
-                 user.employmentStatus === 'recently_left' ? 'Recently Left' : 'Unemployed'}
+                 user.employmentStatus === 'recently_left' ? 'Recently Left' : 'Open to work'}
               </span>
             )}
 
-            <div className="w-full border-t border-brand-medium my-4" />
+            <div className="w-full h-px bg-gray-100 my-4" />
             
             <div className="flex justify-around w-full text-center">
               <div>
-                <div className="text-lg font-bold text-white">{(user.followers || []).length}</div>
-                <div className="text-xs text-gray-400">Followers</div>
+                <p className="text-lg font-black text-hv-text">{(user.followers || []).length}</p>
+                <p className="text-[10px] font-bold text-hv-subtle uppercase tracking-wider">Followers</p>
               </div>
               <div>
-                <div className="text-lg font-bold text-white">{(user.following || []).length}</div>
-                <div className="text-xs text-gray-400">Following</div>
+                <p className="text-lg font-black text-hv-text">{(user.following || []).length}</p>
+                <p className="text-[10px] font-bold text-hv-subtle uppercase tracking-wider">Following</p>
               </div>
             </div>
 
-            <Link to="/profile" className="mt-6 w-full text-center text-xs font-semibold py-2 rounded-xl bg-brand-medium hover:bg-brand-medium/70 transition-colors">
-              Edit Profile
+            <Link to="/profile" className="btn-ghost w-full py-2.5 mt-6 text-xs flex items-center justify-center gap-1 font-bold">
+              Edit Workspace <Sparkles size={12} />
             </Link>
           </div>
         </div>
 
-        {/* Feed */}
+        {/* Center: Composer + Feed */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glassmorphism p-5 rounded-2xl">
+          
+          {/* Post composer */}
+          <div className="card p-5">
             <form onSubmit={handleCreatePost}>
-              <div className="flex space-x-3 items-start">
+              <div className="flex gap-3 items-start">
                 <img
-                  src={user.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.name}`}
+                  src={user.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}`}
                   alt="avatar"
-                  className="w-10 h-10 rounded-full border border-brand-purple bg-brand-medium"
+                  className="w-10 h-10 rounded-xl object-cover border border-gray-100 bg-gray-50 flex-shrink-0"
                 />
                 <textarea
                   value={postContent}
                   onChange={e => setPostContent(e.target.value)}
-                  placeholder="What professional update do you want to share?"
-                  className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-purple min-h-[90px] resize-none"
+                  placeholder="Share what's happening on your career journey..."
+                  className="input-field min-h-[90px] text-sm resize-none pt-2"
                   required
                 />
               </div>
@@ -172,140 +179,209 @@ const ProfessionalFeed = () => {
                 <button
                   type="submit"
                   disabled={actionLoading || !postContent.trim()}
-                  className="px-5 py-2 text-sm font-semibold bg-brand-purple hover:bg-opacity-90 transition-all rounded-xl disabled:opacity-50"
+                  className="btn-primary py-2 text-xs"
                 >
-                  {actionLoading ? 'Posting...' : 'Post Update'}
+                  {actionLoading ? 'Sharing...' : <><Send size={12} /> Share Update</>}
                 </button>
               </div>
             </form>
           </div>
 
-          {posts.length === 0 ? (
-            <div className="glassmorphism p-10 rounded-2xl text-center text-gray-400">
-              <p className="text-lg">No updates in your feed yet.</p>
-              <p className="text-sm mt-1">Be the first to share a post!</p>
+          {/* Posts list */}
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <SkeletonPostCard key={i} />
+              ))}
             </div>
-          ) : posts.map(post => {
-            const isLiked = post.likes?.includes(user._id);
-            const isCompanyPost = post.userId?.accountType === 'company';
-            return (
-              <div key={post._id} className="glassmorphism p-5 rounded-2xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={post.userId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${post.userId?.name}`}
-                      alt={post.userId?.name}
-                      className={`w-10 h-10 rounded-full border bg-brand-medium ${isCompanyPost ? 'border-brand-accent' : 'border-brand-purple'}`}
-                    />
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <Link to={`/profile/${post.userId?._id}`} className="font-semibold text-white text-sm hover:text-brand-purple transition-colors">{post.userId?.name}</Link>
-                        {isCompanyPost && (
-                          <span className="text-[10px] bg-brand-purple/30 text-brand-accent px-1.5 py-0.2 rounded border border-brand-purple/40">Company</span>
-                        )}
-                        {isCompanyPost && post.userId?.verificationStatus === 'verified' && (
-                          <MdVerified className="text-brand-accent w-4 h-4" title="Verified Company" />
-                        )}
+          ) : posts.length === 0 ? (
+            <div className="card p-12 text-center text-hv-muted space-y-2">
+              <Users size={40} className="mx-auto text-hv-subtle animate-float" />
+              <p className="font-bold text-hv-text">Your feed is quiet</p>
+              <p className="text-sm">Be the first to post an update or follow people to get started!</p>
+            </div>
+          ) : (
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: {},
+                show: { transition: { staggerChildren: 0.05 } }
+              }}
+              className="space-y-5"
+            >
+              {posts.map(post => {
+                const isLiked = post.likes?.includes(user._id);
+                const isCompanyPost = post.userId?.accountType === 'company';
+                return (
+                  <motion.div
+                    key={post._id}
+                    variants={{
+                      hidden: { opacity: 0, y: 16 },
+                      show: { opacity: 1, y: 0 }
+                    }}
+                    className="card p-5 space-y-4"
+                  >
+                    {/* Post Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={post.userId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(post.userId?.name || '')}`}
+                          alt=""
+                          className={`w-10 h-10 rounded-xl object-cover border bg-gray-50 flex-shrink-0 ${
+                            isCompanyPost ? 'border-hv-coral/40' : 'border-hv-violet/30'
+                          }`}
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Link to={`/profile/${post.userId?._id}`} className="font-extrabold text-hv-text text-sm hover:text-hv-violet transition-colors">
+                              {post.userId?.name}
+                            </Link>
+                            {isCompanyPost && (
+                              <span className="chip chip-coral text-[9px] px-1 py-0">Company</span>
+                            )}
+                            {isCompanyPost && post.userId?.verificationStatus === 'verified' && (
+                              <CheckCircle2 size={13} className="text-emerald-500" />
+                            )}
+                          </div>
+                          <p className="text-xs text-hv-muted font-medium line-clamp-1 max-w-[200px] sm:max-w-[300px]">
+                            {isCompanyPost 
+                              ? (post.userId?.companyDetails?.industry || 'Technology Partner')
+                              : (post.userId?.headline || 'Member of HireVerse')}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-400 truncate max-w-[250px] sm:max-w-[350px]">
-                        {isCompanyPost 
-                          ? (post.userId?.companyDetails?.industry || 'Company')
-                          : (post.userId?.headline || 'Member of HireVerse')}
+
+                      {/* Follow Button */}
+                      {post.userId?._id !== user._id && (
+                        <button
+                          onClick={() => handleFollowChange(post.userId?._id, user.following?.includes(post.userId?._id))}
+                          className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all cursor-pointer ${
+                            requestedIds.includes(post.userId?._id)
+                              ? 'border-gray-200 bg-gray-50 text-hv-subtle cursor-not-allowed'
+                              : user.following?.includes(post.userId?._id)
+                              ? 'border-gray-200 bg-white text-hv-muted hover:border-gray-300'
+                              : 'btn-secondary text-[10px] px-3 py-1.5 border-none'
+                          }`}
+                          disabled={requestedIds.includes(post.userId?._id)}
+                        >
+                          {user.following?.includes(post.userId?._id) 
+                            ? 'Following' 
+                            : requestedIds.includes(post.userId?._id) 
+                            ? 'Requested' 
+                            : '+ Follow'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <p className="text-sm text-hv-text leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                    
+                    {/* Likes & Comments bar */}
+                    <div className="flex items-center gap-6 pt-3 border-t border-gray-50 text-xs text-hv-muted font-semibold">
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleLikePost(post._id)}
+                        className={`flex items-center gap-1.5 hover:text-hv-text transition-colors cursor-pointer ${
+                          isLiked ? 'text-hv-violet font-bold' : ''
+                        }`}
+                      >
+                        <ThumbsUp size={14} className={isLiked ? 'fill-current' : ''} />
+                        <span>{isLiked ? 'Liked' : 'Like'} ({post.likes.length})</span>
+                      </motion.button>
+                      <div className="flex items-center gap-1.5">
+                        <MessageSquare size={14} />
+                        <span>Comments ({post.comments?.length || 0})</span>
                       </div>
                     </div>
-                  </div>
-                  {post.userId?._id !== user._id && (
-                    <button
-                      onClick={() => handleFollowChange(post.userId?._id, user.following?.includes(post.userId?._id))}
-                      className={`px-3 py-1.5 rounded-lg border border-brand-purple/40 text-[10px] font-bold transition-colors ${
-                        requestedIds.includes(post.userId?._id) ? 'text-gray-400 bg-brand-medium cursor-not-allowed' : 'text-brand-accent hover:bg-brand-purple hover:text-white'
-                      }`}
-                      disabled={requestedIds.includes(post.userId?._id)}
-                    >
-                      {user.following?.includes(post.userId?._id) ? 'Following' : requestedIds.includes(post.userId?._id) ? 'Requested' : '+ Follow'}
-                    </button>
-                  )}
-                </div>
-                <div className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{post.content}</div>
-                <div className="flex items-center space-x-6 pt-2 border-t border-brand-medium/50 text-xs text-gray-400">
-                  <button onClick={() => handleLikePost(post._id)} className={`flex items-center space-x-1 hover:text-white transition-colors ${isLiked ? 'text-brand-purple font-semibold' : ''}`}>
-                    <FaThumbsUp /><span>{isLiked ? 'Liked' : 'Like'} ({post.likes.length})</span>
-                  </button>
-                  <div className="flex items-center space-x-1">
-                    <FaCommentAlt /><span>Comments ({post.comments?.length || 0})</span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {(post.comments || []).map(comment => (
-                    <div key={comment._id} className="flex space-x-2.5 items-start text-xs bg-brand-medium/30 p-2.5 rounded-xl">
-                      <img
-                        src={comment.userId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${comment.userId?.name}`}
-                        alt={comment.userId?.name}
-                        className="w-7 h-7 rounded-full border border-brand-purple bg-brand-medium"
-                      />
-                      <div className="flex-1">
-                        <span className="font-bold text-white">{comment.userId?.name}</span>
-                        <span className="text-gray-400 block text-[10px]">{comment.userId?.headline}</span>
-                        <p className="text-gray-200 mt-1">{comment.text}</p>
-                      </div>
+
+                    {/* Comments list */}
+                    <div className="space-y-3 pt-2">
+                      <AnimatePresence>
+                        {(post.comments || []).map(comment => (
+                          <motion.div
+                            key={comment._id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex gap-2.5 items-start text-xs bg-gray-50/70 p-3 rounded-xl border border-gray-100"
+                          >
+                            <img
+                              src={comment.userId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(comment.userId?.name || '')}`}
+                              alt=""
+                              className="w-7 h-7 rounded-lg object-cover border border-gray-200 bg-white flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="font-extrabold text-hv-text">{comment.userId?.name}</span>
+                              <span className="text-hv-subtle block text-[10px] mt-0.5 font-medium line-clamp-1">{comment.userId?.headline}</span>
+                              <p className="text-hv-text mt-1.5 leading-relaxed">{comment.text}</p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                      
+                      {/* Add comment form */}
+                      <form onSubmit={e => handleCommentSubmit(e, post._id)} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={commentTexts[post._id] || ''}
+                          onChange={e => setCommentTexts({ ...commentTexts, [post._id]: e.target.value })}
+                          placeholder="Write an encouraging comment..."
+                          className="input-field py-1.5 text-xs flex-grow"
+                        />
+                        <button type="submit" className="btn-secondary py-2 px-4 text-xs font-bold border-none bg-hv-violet/10 text-hv-violet hover:bg-hv-violet/15 flex items-center justify-center">
+                          Send
+                        </button>
+                      </form>
                     </div>
-                  ))}
-                  <form onSubmit={e => handleCommentSubmit(e, post._id)} className="flex space-x-2 items-center">
-                    <input
-                      type="text"
-                      value={commentTexts[post._id] || ''}
-                      onChange={e => setCommentTexts({ ...commentTexts, [post._id]: e.target.value })}
-                      placeholder="Write a comment..."
-                      className="flex-grow bg-brand-medium/20 border border-brand-medium rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-brand-purple"
-                    />
-                    <button type="submit" className="px-3 py-1.5 text-xs font-semibold bg-brand-purple rounded-xl hover:bg-opacity-90 transition-colors">Send</button>
-                  </form>
-                </div>
-              </div>
-            );
-          })}
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
         </div>
 
-        {/* Suggestions Column */}
+        {/* Right: Suggested follows */}
         <div className="lg:col-span-1 space-y-6">
           {/* People Suggestions */}
-          <div className="glassmorphism p-5 rounded-2xl">
-            <h3 className="text-md font-bold mb-4 flex items-center space-x-2">
-              <FaUserFriends className="text-brand-purple" /><span>Professionals to Follow</span>
+          <div className="card p-5">
+            <h3 className="text-sm font-bold text-hv-text mb-4 flex items-center gap-1.5">
+              <Users size={16} className="text-hv-violet" /> Professionals
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {suggestedUsers
                 .filter(u => u.accountType === 'professional' && u._id !== user._id)
                 .slice(0, 4)
                 .map(recUser => {
                   const isFollowing = user.following?.includes(recUser._id);
+                  const isPending = requestedIds.includes(recUser._id);
                   return (
-                    <div key={recUser._id} className="flex items-center justify-between text-xs py-2 border-b border-brand-medium/30 last:border-0">
-                      <div className="flex items-center space-x-2">
+                    <div key={recUser._id} className="flex items-center justify-between gap-2 text-xs pb-3 border-b border-gray-50 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <img
-                          src={recUser.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${recUser.name}`}
-                          alt={recUser.name}
-                          className="w-8 h-8 rounded-full border border-brand-purple bg-brand-medium"
+                          src={recUser.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(recUser.name)}`}
+                          alt=""
+                          className="w-8 h-8 rounded-lg object-cover border border-gray-100 bg-gray-50 flex-shrink-0"
                         />
-                        <div className="min-w-0 flex-1">
-                          <Link to={`/profile/${recUser._id}`} className="block font-semibold text-white truncate max-w-[100px] hover:text-brand-purple transition-colors">{recUser.name}</Link>
-                          <div className="text-[10px] text-gray-400 truncate max-w-[100px]">{recUser.headline || 'Professional'}</div>
+                        <div className="min-w-0">
+                          <Link to={`/profile/${recUser._id}`} className="block font-bold text-hv-text truncate hover:text-hv-violet transition-colors">{recUser.name}</Link>
+                          <p className="text-[10px] text-hv-muted truncate">{recUser.headline || 'Professional'}</p>
                         </div>
                       </div>
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleFollowChange(recUser._id, isFollowing)}
-                        disabled={requestedIds.includes(recUser._id)}
-                        className={`p-1.5 rounded-lg border transition-colors flex-shrink-0 ${
+                        disabled={isPending}
+                        className={`p-1.5 rounded-lg border transition-colors flex-shrink-0 cursor-pointer ${
                           isFollowing 
-                            ? 'border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white' 
-                            : requestedIds.includes(recUser._id)
-                            ? 'border-gray-500 text-gray-400 bg-brand-medium cursor-not-allowed'
-                            : 'border-brand-medium text-white bg-brand-purple/20 hover:bg-brand-purple'
+                            ? 'border-gray-200 bg-white text-hv-muted hover:border-gray-300' 
+                            : isPending
+                            ? 'border-gray-100 bg-gray-50 text-hv-subtle cursor-not-allowed'
+                            : 'btn-secondary p-1.5 border-none'
                         }`}
-                        title={isFollowing ? 'Unfollow' : requestedIds.includes(recUser._id) ? 'Requested' : 'Follow'}
+                        title={isFollowing ? 'Unfollow' : isPending ? 'Requested' : 'Follow'}
                       >
-                        {isFollowing ? <FaUserMinus /> : requestedIds.includes(recUser._id) ? <FaCheck className="w-3.5 h-3.5" /> : <FaUserPlus />}
-                      </button>
+                        {isFollowing ? <UserMinus size={13} /> : isPending ? <CheckCircle2 size={13} className="text-hv-subtle" /> : <UserPlus size={13} />}
+                      </motion.button>
                     </div>
                   );
                 })}
@@ -313,45 +389,46 @@ const ProfessionalFeed = () => {
           </div>
 
           {/* Companies Suggestions */}
-          <div className="glassmorphism p-5 rounded-2xl">
-            <h3 className="text-md font-bold mb-4 flex items-center space-x-2">
-              <FaBuilding className="text-brand-accent" /><span>Featured Companies</span>
+          <div className="card p-5">
+            <h3 className="text-sm font-bold text-hv-text mb-4 flex items-center gap-1.5">
+              <Building size={16} className="text-hv-coral" /> Companies
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {suggestedUsers
                 .filter(u => u.accountType === 'company')
                 .slice(0, 4)
                 .map(company => {
                   const isFollowing = user.following?.includes(company._id);
                   return (
-                    <div key={company._id} className="flex items-center justify-between text-xs py-2 border-b border-brand-medium/30 last:border-0">
-                      <div className="flex items-center space-x-2 min-w-0">
+                    <div key={company._id} className="flex items-center justify-between gap-2 text-xs pb-3 border-b border-gray-50 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <img
                           src={company.profileImage}
-                          alt={company.name}
-                          className="w-8 h-8 rounded border border-brand-accent bg-brand-medium object-contain flex-shrink-0"
+                          alt=""
+                          className="w-8 h-8 rounded border border-gray-100 bg-gray-50 object-contain flex-shrink-0"
                         />
                         <div className="min-w-0">
-                          <div className="font-semibold text-white truncate max-w-[100px] flex items-center gap-0.5">
-                            <Link to={`/companies/${company._id}`} className="hover:text-brand-accent transition-colors">{company.name}</Link>
+                          <div className="font-bold text-hv-text truncate flex items-center gap-0.5">
+                            <Link to={`/companies/${company._id}`} className="hover:text-hv-violet transition-colors">{company.name}</Link>
                             {company.verificationStatus === 'verified' && (
-                              <MdVerified className="text-brand-accent flex-shrink-0" />
+                              <CheckCircle2 size={11} className="text-emerald-500 flex-shrink-0" />
                             )}
                           </div>
-                          <div className="text-[10px] text-gray-400 truncate max-w-[100px]">{company.companyDetails?.industry || 'Technology'}</div>
+                          <p className="text-[10px] text-hv-muted truncate">{company.companyDetails?.industry || 'Technology'}</p>
                         </div>
                       </div>
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleFollowChange(company._id, isFollowing)}
-                        className={`p-1.5 rounded-lg border transition-colors flex-shrink-0 ${
+                        className={`p-1.5 rounded-lg border transition-colors flex-shrink-0 cursor-pointer ${
                           isFollowing 
-                            ? 'border-brand-purple text-brand-purple hover:bg-brand-purple hover:text-white' 
-                            : 'border-brand-medium text-white bg-brand-purple/20 hover:bg-brand-purple'
+                            ? 'border-gray-200 bg-white text-hv-muted hover:border-gray-300' 
+                            : 'btn-secondary p-1.5 border-none'
                         }`}
                         title={isFollowing ? 'Unfollow' : 'Follow'}
                       >
-                        {isFollowing ? <FaUserMinus /> : <FaUserPlus />}
-                      </button>
+                        {isFollowing ? <UserMinus size={13} /> : <Plus size={13} />}
+                      </motion.button>
                     </div>
                   );
                 })}

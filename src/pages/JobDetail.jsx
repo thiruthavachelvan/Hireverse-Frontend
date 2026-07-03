@@ -3,21 +3,21 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
-  FaBuilding, FaMapMarkerAlt, FaDollarSign, FaCheckCircle,
-  FaClock, FaArrowLeft, FaBriefcase, FaCode, FaLayerGroup,
-  FaTimesCircle,
-} from 'react-icons/fa';
-import { MdVerified } from 'react-icons/md';
+  Building2, MapPin, DollarSign, CheckCircle2,
+  Clock, ArrowLeft, Briefcase, Code, Layers,
+  XCircle, ExternalLink, Megaphone, FileText, X
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const VerifiedBadge = ({ status }) => {
   if (status === 'verified') return (
-    <span className="flex items-center gap-1.5 text-sm bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-medium">
-      <MdVerified className="w-4 h-4" /> HireVerse Verified Company
+    <span className="flex items-center gap-1 text-xs bg-emerald-50 text-emerald-600 border border-emerald-100 px-2.5 py-1 rounded-full font-bold">
+      <CheckCircle2 size={13} className="text-emerald-500" /> HireVerse Partner
     </span>
   );
   return (
-    <span className="flex items-center gap-1.5 text-sm bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full">
-      <FaClock className="w-3.5 h-3.5" /> Verification Pending
+    <span className="flex items-center gap-1 text-xs bg-amber-50 text-amber-600 border border-amber-100 px-2.5 py-1 rounded-full font-bold">
+      <Clock size={13} className="text-amber-500" /> Verification Pending
     </span>
   );
 };
@@ -54,25 +54,29 @@ const ApplicationModal = ({ job, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-[#1a1a2e] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative"
+      >
+        <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-xl font-bold text-white">Apply for {job.jobTitle}</h2>
-            <p className="text-gray-400 text-sm mt-0.5">{job.companyId?.name}</p>
+            <h2 className="text-lg font-black text-hv-text">Apply for {job.jobTitle}</h2>
+            <p className="text-xs text-hv-muted font-bold mt-0.5">{job.companyId?.name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-white/5 transition-colors">
-            <FaTimesCircle className="w-5 h-5" />
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-hv-subtle hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+            <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {job.applicationForm?.length === 0 ? (
-            <p className="text-gray-400 text-center py-4">No additional questions. Click submit to apply.</p>
+            <p className="text-hv-muted text-sm text-center py-4">No additional questions. Click submit to apply.</p>
           ) : (
             (job.applicationForm || []).map((q, idx) => (
-              <div key={idx}>
-                <label className="block text-sm font-medium text-gray-200 mb-2">
+              <div key={idx} className="space-y-1.5">
+                <label className="block text-sm font-semibold text-hv-text">
                   {q.question}
                   {q.required && <span className="text-red-400 ml-1">*</span>}
                 </label>
@@ -80,37 +84,37 @@ const ApplicationModal = ({ job, onClose, onSuccess }) => {
                   rows={3}
                   value={answers[idx]?.answer || ''}
                   onChange={e => handleAnswer(idx, e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 resize-none transition-colors"
-                  placeholder="Your answer..."
+                  className="input-field min-h-[80px] resize-none pt-2"
+                  placeholder="Type your response here..."
                 />
               </div>
             ))
           )}
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm">
+            <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-semibold">
               {error}
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-4 border-t border-gray-100">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-5 py-3 border border-white/10 text-gray-300 hover:text-white hover:bg-white/5 rounded-xl font-medium transition-all"
+              className="btn-ghost flex-1 py-3"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 px-5 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all shadow-lg shadow-violet-500/20"
+              className="btn-primary flex-1 py-3"
             >
               {submitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -130,7 +134,6 @@ const JobDetail = () => {
       try {
         const { data } = await api.get(`/jobs/${id}`);
         setJob(data);
-        // Check if already applied
         if (isProfessional) {
           try {
             const appsRes = await api.get('/applications/my-applications');
@@ -144,21 +147,28 @@ const JobDetail = () => {
       setLoading(false);
     };
     fetchJob();
-  }, [id]);
+  }, [id, isProfessional, navigate]);
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-500"></div>
+    <div className="flex min-h-[80vh] items-center justify-center bg-hv-bg">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        className="w-10 h-10 rounded-full border-2 border-transparent"
+        style={{ borderTopColor: '#8B5CF6', borderRightColor: '#FF6B6B' }}
+      />
     </div>
   );
 
   if (!job) return null;
 
   const company = job.companyId;
-  const isVerified = company?.verificationStatus === 'verified';
 
   return (
-    <div className="min-h-screen bg-brand-dark px-4 py-8">
+    <div className="min-h-screen px-4 md:px-8 py-8 relative">
+      <div className="mesh-blob-1 animate-blob-1" style={{ top: '-10%', left: '-10%' }} />
+      <div className="mesh-blob-2 animate-blob-2" style={{ bottom: '-10%', right: '-10%' }} />
+
       {showApplyModal && (
         <ApplicationModal
           job={job}
@@ -171,78 +181,79 @@ const JobDetail = () => {
         />
       )}
 
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6 relative z-10">
+        
         {/* Back */}
         <button
           onClick={() => navigate('/jobs')}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
+          className="flex items-center gap-1.5 text-hv-muted hover:text-hv-text transition-colors text-sm font-semibold cursor-pointer"
         >
-          <FaArrowLeft /> Back to Jobs
+          <ArrowLeft size={15} /> Back to Jobs
         </button>
 
         {/* Success Banner */}
         {applySuccess && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-5 py-4 rounded-xl flex items-center gap-3">
-            <FaCheckCircle className="w-5 h-5 flex-shrink-0" />
+          <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-4 rounded-2xl flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5 text-emerald-600" />
             <div>
-              <p className="font-semibold">Application submitted successfully!</p>
-              <p className="text-sm text-emerald-300/80 mt-0.5">The company will review your answers and respond soon.</p>
+              <p className="font-bold text-sm">Application submitted successfully!</p>
+              <p className="text-xs text-emerald-600/80 mt-0.5 font-medium">The company will review your answers and contact you shortly.</p>
             </div>
           </div>
         )}
 
-        {/* Job Header */}
-        <div className="glassmorphism rounded-2xl p-6">
-          <div className="flex flex-col md:flex-row md:items-start gap-5">
-            <img
-              src={company?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${company?.name}`}
-              alt={company?.name}
-              className="w-16 h-16 rounded-2xl border border-white/10 bg-brand-medium"
-            />
-            <div className="flex-1">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h1 className="text-2xl font-bold text-white">{job.jobTitle}</h1>
-                  <p className="text-gray-400 mt-1 flex items-center gap-1.5">
-                    <FaBuilding className="text-violet-400 w-3.5 h-3.5" />
-                    {company?.name}
-                  </p>
-                </div>
-                <VerifiedBadge status={company?.verificationStatus} />
-              </div>
-
-              <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-400">
-                <span className="flex items-center gap-1.5">
-                  <FaMapMarkerAlt className="text-violet-400" /> {job.location}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <FaDollarSign className="text-emerald-400" /> {job.salary}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <FaBriefcase className="text-blue-400" /> {job.jobType}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <FaLayerGroup className="text-pink-400" /> {job.rounds?.length || 0} Round{job.rounds?.length !== 1 ? 's' : ''}
-                </span>
+        {/* Job Header Card */}
+        <div className="card-static p-6 space-y-5">
+          <div className="flex flex-col md:flex-row md:items-start gap-4 justify-between">
+            <div className="flex items-start gap-4">
+              <img
+                src={company?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(company?.name || '')}`}
+                alt={company?.name}
+                className="w-14 h-14 rounded-2xl border border-gray-100 bg-gray-50 object-contain flex-shrink-0"
+              />
+              <div>
+                <h1 className="text-2xl font-black text-hv-text leading-snug">{job.jobTitle}</h1>
+                <p className="text-sm font-bold text-hv-violet mt-1 flex items-center gap-1.5">
+                  <Building2 size={14} /> {company?.name}
+                </p>
               </div>
             </div>
+            
+            <div className="flex-shrink-0 mt-2 md:mt-0">
+              <VerifiedBadge status={company?.verificationStatus} />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 text-xs">
+            <span className="chip chip-gray">
+              <MapPin size={11} className="text-hv-subtle" /> {job.location}
+            </span>
+            <span className="chip chip-success font-bold">
+              <DollarSign size={11} /> {job.salary}
+            </span>
+            <span className="chip chip-violet font-semibold">
+              <Briefcase size={11} /> {job.jobType}
+            </span>
+            <span className="chip chip-coral">
+              <Layers size={11} /> {job.rounds?.length || 0} Rounds
+            </span>
           </div>
 
           {/* Apply Button */}
           {isProfessional && (
-            <div className="mt-5 pt-5 border-t border-white/10">
+            <div className="pt-4 border-t border-gray-100 flex justify-end">
               {applied ? (
-                <div className="flex items-center gap-2 text-emerald-400 font-medium">
-                  <FaCheckCircle /> Already applied
+                <div className="flex items-center gap-1.5 px-4 py-2 border border-emerald-100 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold">
+                  <CheckCircle2 size={14} /> Already applied
                 </div>
               ) : !job.isActive ? (
-                <div className="flex items-center gap-2 text-gray-500 font-medium">
-                  <FaTimesCircle /> This job listing is closed
+                <div className="flex items-center gap-1.5 px-4 py-2 bg-gray-50 border border-gray-200 text-hv-muted rounded-xl text-xs font-bold">
+                  <XCircle size={14} /> This job listing is closed
                 </div>
               ) : (
                 <button
                   onClick={() => setShowApplyModal(true)}
-                  className="px-8 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
+                  className="btn-primary px-8 py-3"
                 >
                   Apply Now
                 </button>
@@ -251,24 +262,26 @@ const JobDetail = () => {
           )}
         </div>
 
+        {/* Content Split */}
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {/* Main Description details */}
           <div className="md:col-span-2 space-y-6">
+            
             {/* Description */}
-            <div className="glassmorphism rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-white mb-4">Job Description</h2>
-              <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{job.description}</p>
+            <div className="card-static p-6 space-y-4">
+              <h2 className="text-lg font-bold text-hv-text">Job Description</h2>
+              <p className="text-hv-muted text-sm leading-relaxed whitespace-pre-wrap">{job.description}</p>
             </div>
 
             {/* Required Skills */}
             {job.requiredSkills?.length > 0 && (
-              <div className="glassmorphism rounded-2xl p-6">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <FaCode className="text-violet-400" /> Required Skills
+              <div className="card-static p-6 space-y-4">
+                <h2 className="text-lg font-bold text-hv-text flex items-center gap-1.5">
+                  <Code size={18} className="text-hv-violet" /> Required Skills
                 </h2>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {job.requiredSkills.map(skill => (
-                    <span key={skill} className="bg-violet-500/15 text-violet-300 border border-violet-500/25 px-3 py-1.5 rounded-lg text-sm font-medium">
+                    <span key={skill} className="chip chip-violet font-semibold text-xs py-1 px-3">
                       {skill}
                     </span>
                   ))}
@@ -276,18 +289,20 @@ const JobDetail = () => {
               </div>
             )}
 
-            {/* Application Form Preview */}
+            {/* Application Questions preview */}
             {job.applicationForm?.length > 0 && (
-              <div className="glassmorphism rounded-2xl p-6">
-                <h2 className="text-lg font-bold text-white mb-4">Application Form</h2>
-                <p className="text-gray-400 text-sm mb-4">You will need to answer these questions when applying:</p>
+              <div className="card-static p-6 space-y-4">
+                <h2 className="text-lg font-bold text-hv-text flex items-center gap-1.5">
+                  <FileText size={18} className="text-hv-violet" /> Application Form Questions
+                </h2>
+                <p className="text-xs text-hv-muted font-bold uppercase tracking-wider">Required responses to apply</p>
                 <div className="space-y-3">
                   {job.applicationForm.map((q, idx) => (
-                    <div key={idx} className="flex items-start gap-3 bg-white/3 rounded-xl p-4 border border-white/5">
-                      <span className="text-violet-400 font-bold text-sm mt-0.5 shrink-0">Q{idx + 1}</span>
+                    <div key={idx} className="flex gap-3 bg-gray-50 border border-gray-100 rounded-xl p-4">
+                      <span className="text-hv-violet font-extrabold text-xs mt-0.5 shrink-0">Q{idx + 1}</span>
                       <div>
-                        <p className="text-gray-200 text-sm">{q.question}</p>
-                        {q.required && <span className="text-xs text-red-400 mt-1 block">Required</span>}
+                        <p className="text-hv-text text-sm font-semibold leading-relaxed">{q.question}</p>
+                        {q.required && <span className="chip chip-coral text-[9px] mt-1.5 px-2 py-0">Required</span>}
                       </div>
                     </div>
                   ))}
@@ -296,59 +311,48 @@ const JobDetail = () => {
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* Right Sidebar details */}
           <div className="space-y-6">
-            {/* Hiring Rounds */}
-            <div className="glassmorphism rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <FaLayerGroup className="text-violet-400" /> Hiring Process
+            
+            {/* Hiring pipeline list */}
+            <div className="card-static p-6 space-y-4">
+              <h2 className="text-lg font-bold text-hv-text flex items-center gap-1.5">
+                <Layers size={18} className="text-hv-violet" /> Hiring Process
               </h2>
               {job.rounds?.length === 0 ? (
-                <p className="text-gray-400 text-sm">No rounds specified</p>
+                <p className="text-xs text-hv-muted italic">No hiring rounds specified.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="relative pl-4 space-y-4">
                   {job.rounds.map((round, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-violet-600/30 border border-violet-500/40 flex items-center justify-center text-violet-300 text-xs font-bold shrink-0">
-                        {round.roundNumber}
+                    <div key={idx} className="relative flex gap-3 pb-3 last:pb-0">
+                      {idx < job.rounds.length - 1 && (
+                        <div className="absolute left-2 top-6 w-0.5 h-full bg-violet-100" />
+                      )}
+                      <div className="w-4.5 h-4.5 rounded-full bg-hv-violet border border-violet-200 flex-shrink-0 mt-1 z-10 animate-pulse-glow" />
+                      <div>
+                        <p className="text-hv-text text-sm font-bold leading-tight">{round.name}</p>
+                        <p className="text-hv-subtle text-[10px] uppercase font-bold mt-0.5">Round {round.roundNumber}</p>
                       </div>
-                      <div className="flex-1 h-px bg-violet-500/20" style={{ display: idx < job.rounds.length - 1 ? 'none' : 'block' }} />
-                      <p className="text-gray-300 text-sm font-medium">{round.name}</p>
                     </div>
                   ))}
-                  {/* Visual timeline */}
-                  <div className="mt-4 relative pl-4">
-                    {job.rounds.map((round, idx) => (
-                      <div key={idx} className="relative flex gap-3 pb-4 last:pb-0">
-                        {idx < job.rounds.length - 1 && (
-                          <div className="absolute left-2.5 top-6 w-px h-full bg-violet-500/20" />
-                        )}
-                        <div className="w-5 h-5 rounded-full bg-violet-600 border-2 border-violet-400 flex-shrink-0 mt-0.5 z-10" />
-                        <div>
-                          <p className="text-white text-sm font-semibold">{round.name}</p>
-                          <p className="text-gray-500 text-xs">Round {round.roundNumber}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* Company Info */}
-            <div className="glassmorphism rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-white mb-4">About the Company</h2>
-              <div className="space-y-2 text-sm text-gray-400">
-                {company?.companyDetails?.industry && <p><span className="text-gray-300">Industry:</span> {company.companyDetails.industry}</p>}
-                {company?.companyDetails?.size && <p><span className="text-gray-300">Size:</span> {company.companyDetails.size}</p>}
+            {/* About Company Mini Card */}
+            <div className="card-static p-6 space-y-4">
+              <h2 className="text-lg font-bold text-hv-text">About the Company</h2>
+              <div className="space-y-2.5 text-xs text-hv-muted">
+                {company?.companyDetails?.industry && <p><strong className="text-hv-text">Industry:</strong> {company.companyDetails.industry}</p>}
+                {company?.companyDetails?.size && <p><strong className="text-hv-text">Size:</strong> {company.companyDetails.size} employees</p>}
                 {company?.companyDetails?.website && (
                   <p>
-                    <a href={company.companyDetails.website} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:text-violet-300 underline">
-                      {company.companyDetails.website}
+                    <a href={company.companyDetails.website} target="_blank" rel="noopener noreferrer" className="text-hv-violet hover:opacity-80 underline flex items-center gap-1 font-bold">
+                      Visit Website <ExternalLink size={10} />
                     </a>
                   </p>
                 )}
-                {company?.bio && <p className="mt-2 text-gray-300 leading-relaxed">{company.bio}</p>}
+                {company?.bio && <p className="pt-2 border-t border-gray-100 leading-relaxed text-hv-muted">{company.bio}</p>}
               </div>
             </div>
           </div>

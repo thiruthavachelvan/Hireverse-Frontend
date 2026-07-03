@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { Link } from 'react-router-dom';
@@ -125,9 +126,14 @@ const ApplicantCard = ({ app, job, onAction, onViewReport }) => {
   const canHire = isInRound && app.currentRound === totalRounds;
 
   return (
-    <div className={`bg-brand-medium/20 border rounded-2xl overflow-hidden transition-all ${
-      isHired ? 'border-emerald-500/30' : isRejected ? 'border-red-500/10 opacity-60' : 'border-white/5'
-    }`}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -2, scale: 1.005 }}
+      className={`bg-white/90 border rounded-2xl overflow-hidden transition-all ${
+        isHired ? 'border-emerald-200' : isRejected ? 'border-red-200 opacity-80' : 'border-gray-100'
+      }`}
+    >
       {/* Header row */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
         <img
@@ -164,7 +170,12 @@ const ApplicantCard = ({ app, job, onAction, onViewReport }) => {
 
       {/* Expanded content */}
       {expanded && (
-        <div className="px-4 pb-4 space-y-4 border-t border-white/5 pt-4">
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4"
+        >
           {/* Candidate Profile Details */}
           <div className="bg-white/3 rounded-xl p-3 space-y-2">
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Candidate Profile</p>
@@ -544,9 +555,9 @@ const ApplicantCard = ({ app, job, onAction, onViewReport }) => {
               </div>
             </form>
           )}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 
@@ -711,7 +722,10 @@ const CompanyDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-brand-dark text-white px-4 md:px-8 py-8">
+    <div className="min-h-screen bg-hv-bg text-hv-text px-4 md:px-8 py-8 company-dashboard-shell relative overflow-hidden">
+      <div className="mesh-blob-1 animate-blob-1" style={{ top: '-10%', left: '-10%' }} />
+      <div className="mesh-blob-2 animate-blob-2" style={{ bottom: '-10%', right: '-10%' }} />
+
       {error && (
         <div className="max-w-6xl mx-auto mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-center text-sm">
           {error}

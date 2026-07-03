@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import api from '../services/api';
 import {
   FaBuilding, FaUsers, FaBriefcase, FaClipboardList,
@@ -8,15 +9,21 @@ import {
 import { MdVerified } from 'react-icons/md';
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
-  <div className="glassmorphism rounded-2xl p-5 flex items-center gap-4">
+  <motion.div
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.25 }}
+    whileHover={{ y: -3, scale: 1.01 }}
+    className="glassmorphism rounded-2xl p-5 flex items-center gap-4"
+  >
     <div className={`p-3 rounded-xl ${color}`}>
       <Icon className="w-6 h-6 text-white" />
     </div>
     <div>
-      <p className="text-gray-400 text-sm">{label}</p>
-      <p className="text-white text-2xl font-bold">{value ?? '—'}</p>
+      <p className="text-hv-muted text-sm">{label}</p>
+      <p className="text-hv-text text-2xl font-black">{value ?? '—'}</p>
     </div>
-  </div>
+  </motion.div>
 );
 
 const StatusBadge = ({ status }) => {
@@ -102,7 +109,10 @@ const AdminDashboard = () => {
   const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-brand-dark px-4 py-8">
+    <div className="min-h-screen bg-hv-bg px-4 py-8 admin-dashboard-shell relative overflow-hidden">
+      <div className="mesh-blob-1 animate-blob-1" style={{ top: '-10%', left: '-10%' }} />
+      <div className="mesh-blob-2 animate-blob-2" style={{ bottom: '-10%', right: '-10%' }} />
+
       {/* Toast */}
       {toast && (
         <div className={`fixed top-20 right-4 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-xl transition-all ${
@@ -112,17 +122,22 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <motion.div
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center gap-4"
+        >
           <div className="p-3 bg-violet-500/20 rounded-2xl">
             <FaShieldAlt className="w-7 h-7 text-violet-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-            <p className="text-gray-400 text-sm mt-1">Manage and verify companies on the HireVerse platform</p>
+            <h1 className="text-3xl font-black text-hv-text">Admin Dashboard</h1>
+            <p className="text-hv-muted text-sm mt-1">Manage and verify companies on the HireVerse platform</p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Stats Grid */}
         {loading ? (
@@ -141,8 +156,8 @@ const AdminDashboard = () => {
         )}
 
         {/* Tabs + Search + Filter */}
-        <div className="glassmorphism rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/10 flex-wrap gap-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="glassmorphism rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 flex-wrap gap-4">
             <div className="flex gap-2">
               {[
                 { id: 'companies', label: 'Companies', icon: FaBuilding },
@@ -326,7 +341,7 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );
