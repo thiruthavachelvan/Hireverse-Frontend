@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Editor } from '@monaco-editor/react';
 import api from '../services/api';
-import { FaClock, FaExclamationTriangle, FaChevronLeft, FaChevronRight, FaPaperPlane } from 'react-icons/fa';
+import { FaClock, FaExclamationTriangle, FaChevronLeft, FaChevronRight, FaPaperPlane, FaLock } from 'react-icons/fa';
 
 const AssessmentTest = () => {
   const { assessmentId } = useParams();
@@ -11,6 +11,7 @@ const AssessmentTest = () => {
   const [assessment, setAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   const [currentQIndex, setCurrentQIndex] = useState(0);
@@ -22,10 +23,15 @@ const AssessmentTest = () => {
     tabSwitchCount: 0,
     fullscreenExitCount: 0,
     copyPasteAttempts: 0,
+    rightClickAttempts: 0,
+    totalTimeOutsideSecureMode: 0,
     violations: []
   });
 
+  const [isFullscreenActive, setIsFullscreenActive] = useState(true);
+  const [violationCount, setViolationCount] = useState(0);
   const [warningMsg, setWarningMsg] = useState('');
+  const exitTimeRef = useRef(null);
 
   const showWarning = (msg) => {
     setWarningMsg(msg);
@@ -33,9 +39,16 @@ const AssessmentTest = () => {
   };
 
   const handleSubmit = useCallback(async (autoSubmit = false) => {
-    if (submitting) return;
+    if (submitting || isSubmitted) return;
     setSubmitting(true);
+    
     try {
+      // Calculate final time outside secure mode if currently outside
+      if (exitTimeRef.current) {
+        const outsideTime = Math.round((Date.now() - exitTimeRef.current) / 1000);
+        proctorData.current.totalTimeOutsideSecureMode += outsideTime;
+      }
+
       if (document.fullscreenElement) {
         await document.exitFullscreen().catch(() => {});
       }
@@ -45,28 +58,57 @@ const AssessmentTest = () => {
         proctorData: proctorData.current
       };
       
-      const { data } = await api.post(`/assessments/${assessmentId}/submit`, payload);
-      alert(`Assessment ${autoSubmit ? 'auto-' : ''}submitted successfully!\nScore: ${data.result.percentage}%\nTrust Score: ${data.result.trustScore || 100}%`);
-      navigate('/interviews');
+      await api.post(`/assessments/${assessmentId}/submit`, payload);
+      setIsSubmitted(true);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit. Please try again or contact support.');
+    } finally {
       setSubmitting(false);
     }
-  }, [answers, assessmentId, navigate, submitting]);
+  }, [answers, assessmentId, submitting, isSubmitted]);
 
+  // Unified violation adder
+  const addViolation = useCallback((type, msg) => {
+    const time = new Date();
+    proctorData.current.violations.push({ type, time, message: msg });
+    
+    if (type === 'TAB_SWITCH') {
+      proctorData.current.tabSwitchCount += 1;
+    } else if (type === 'FULLSCREEN_EXIT') {
+      proctorData.current.fullscreenExitCount += 1;
+    } else if (type === 'COPY_PASTE') {
+      proctorData.current.copyPasteAttempts += 1;
+    } else if (type === 'RIGHT_CLICK') {
+      proctorData.current.rightClickAttempts += 1;
+    }
+
+    // Only TAB_SWITCH and FULLSCREEN_EXIT count towards the 3 allowed violations limit
+    if (type === 'TAB_SWITCH' || type === 'FULLSCREEN_EXIT') {
+      setViolationCount(prev => {
+        const next = prev + 1;
+        if (next > 3) {
+          // Exceeded allowed violations -> auto submit
+          setTimeout(() => {
+            alert('You exceeded the allowed security violations. Your assessment is being submitted automatically.');
+            handleSubmit(true);
+          }, 0);
+        }
+        return next;
+      });
+    }
+  }, [handleSubmit]);
+
+  // Fetch assessment
   useEffect(() => {
     const fetchAssessment = async () => {
       try {
         const { data } = await api.get(`/assessments/${assessmentId}/report`).catch(() => ({ data: null }));
-        if (data?.result) {
+        if (data?.attempt) {
           setError('This assessment has already been completed.');
           setLoading(false);
           return;
         }
 
-        // Wait, the API for fetching by ID doesn't exist. We need to create it in backend?
-        // Actually, `getOrGenerate` returns the generated assessment. We can fetch it by passing job/round or we need a new route `GET /assessments/:assessmentId`.
-        // Let's assume we create a quick route or pass it in state. Let's just create the route.
         const res = await api.get(`/assessments/${assessmentId}`);
         const asm = res.data;
         if (asm.status === 'Completed') {
@@ -95,7 +137,7 @@ const AssessmentTest = () => {
 
   // Timer
   useEffect(() => {
-    if (!assessment || timeLeft <= 0 || submitting) return;
+    if (!assessment || timeLeft <= 0 || submitting || isSubmitted) return;
 
     const timerId = setInterval(() => {
       setTimeLeft(prev => {
@@ -109,50 +151,73 @@ const AssessmentTest = () => {
     }, 1000);
 
     return () => clearInterval(timerId);
-  }, [assessment, timeLeft, submitting, handleSubmit]);
+  }, [assessment, timeLeft, submitting, isSubmitted, handleSubmit]);
 
   // Proctoring Events
   useEffect(() => {
-    if (!assessment || submitting || error) return;
+    if (!assessment || submitting || isSubmitted || error) return;
+
+    // Check if loaded and NOT in fullscreen on start
+    if (!document.fullscreenElement) {
+      setIsFullscreenActive(false);
+      exitTimeRef.current = Date.now();
+    }
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        proctorData.current.tabSwitchCount += 1;
-        proctorData.current.violations.push(`Tab switched at ${new Date().toLocaleTimeString()}`);
+        addViolation('TAB_SWITCH', 'Switched away from the test tab');
         showWarning('Tab switching detected! This violation has been recorded.');
       }
     };
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        proctorData.current.fullscreenExitCount += 1;
-        proctorData.current.violations.push(`Exited fullscreen at ${new Date().toLocaleTimeString()}`);
-        showWarning('Fullscreen exited! Please return to fullscreen. Violations are recorded.');
+      if (document.fullscreenElement) {
+        setIsFullscreenActive(true);
+        if (exitTimeRef.current) {
+          const outsideTime = Math.round((Date.now() - exitTimeRef.current) / 1000);
+          proctorData.current.totalTimeOutsideSecureMode += outsideTime;
+          exitTimeRef.current = null;
+        }
+      } else {
+        setIsFullscreenActive(false);
+        exitTimeRef.current = Date.now();
+        addViolation('FULLSCREEN_EXIT', 'Exited secure fullscreen mode');
+        showWarning('Fullscreen exited! Please return to secure fullscreen. Violations are recorded.');
       }
     };
 
     const handleCopyPaste = (e) => {
       e.preventDefault();
-      proctorData.current.copyPasteAttempts += 1;
-      showWarning('Copy/Paste is disabled and recorded as a violation.');
+      addViolation('COPY_PASTE', `Attempted to ${e.type}`);
+      showWarning('Copying/Pasting is disabled and flagged as a security violation.');
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      addViolation('RIGHT_CLICK', 'Attempted right click context menu');
+      showWarning('Right click is disabled and flagged as a security violation.');
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('copy', handleCopyPaste);
     document.addEventListener('paste', handleCopyPaste);
+    document.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('copy', handleCopyPaste);
       document.removeEventListener('paste', handleCopyPaste);
+      document.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [assessment, submitting, error]);
+  }, [assessment, submitting, isSubmitted, error, addViolation]);
 
   const handleAnswerChange = (qId, val) => {
     setAnswers(prev => ({ ...prev, [qId]: val }));
   };
+
+  const showOverlay = !isFullscreenActive && !loading && !error && !submitting && !isSubmitted;
 
   if (loading) {
     return (
@@ -165,10 +230,36 @@ const AssessmentTest = () => {
   if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#1a1a2e] px-4 text-white">
-        <div className="text-center p-8 bg-white/5 rounded-2xl">
+        <div className="text-center p-8 bg-white/5 border border-white/10 rounded-2xl">
           <FaExclamationTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold">{error}</h2>
           <button onClick={() => navigate('/interviews')} className="mt-4 px-6 py-2 bg-brand-purple rounded-xl font-semibold">Back to Interviews</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSubmitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a2e] px-4 text-white">
+        <div className="text-center p-8 bg-white/5 border border-emerald-500/20 rounded-3xl max-w-md space-y-6 shadow-2xl">
+          <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-white">Assessment Submitted Successfully</h2>
+          <div className="space-y-2 text-sm text-gray-400 leading-relaxed">
+            <p>Your assessment has been submitted.</p>
+            <p>Your results have been sent to the company.</p>
+            <p>The recruiter will update your application status.</p>
+          </div>
+          <button
+            onClick={() => navigate('/interviews')}
+            className="w-full py-3 bg-brand-purple hover:bg-opacity-90 rounded-xl font-semibold transition-all"
+          >
+            Back to Interviews
+          </button>
         </div>
       </div>
     );
@@ -184,9 +275,41 @@ const AssessmentTest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1a2e] text-white flex flex-col">
+    <div className="min-h-screen bg-[#1a1a2e] text-white flex flex-col relative select-none">
+      
+      {/* Secure Mode Blocking Overlay */}
+      {showOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md text-white p-6 text-center select-none">
+          <div className="max-w-md p-8 bg-brand-medium/30 border border-red-500/30 rounded-3xl space-y-6 shadow-2xl">
+            <FaExclamationTriangle className="w-16 h-16 text-red-500 mx-auto animate-bounce" />
+            <h2 className="text-2xl font-black text-white">⚠ Secure Mode Disabled</h2>
+            <p className="text-gray-300 text-sm leading-relaxed">
+              You exited fullscreen mode. Violation recorded: <strong className="text-red-400">Fullscreen Exit</strong>.
+            </p>
+            <div className="bg-red-500/10 border border-red-500/20 py-2.5 rounded-xl text-red-400 font-bold text-sm">
+              Violations: {violationCount}/3
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              To continue your assessment, return to secure fullscreen mode. The test timer continues running in the background.
+            </p>
+            <button
+              onClick={() => {
+                if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen().catch(() => {
+                    alert('Fullscreen request denied. Please check your browser settings.');
+                  });
+                }
+              }}
+              className="w-full py-3 bg-brand-purple hover:bg-opacity-90 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-purple/20"
+            >
+              Return to Fullscreen
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Navbar */}
-      <div className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#161625]">
+      <div className={`h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#161625] ${showOverlay ? 'filter blur-2xl pointer-events-none' : ''}`}>
         <div className="font-bold text-lg text-brand-accent tracking-widest">HIREVERSE ASSESS</div>
         
         {warningMsg && (
@@ -205,7 +328,7 @@ const AssessmentTest = () => {
                 handleSubmit(false);
               }
             }}
-            disabled={submitting}
+            disabled={submitting || showOverlay}
             className="flex items-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-brand-dark rounded-xl font-bold transition-colors disabled:opacity-50"
           >
             <FaPaperPlane /> Finish
@@ -213,7 +336,7 @@ const AssessmentTest = () => {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className={`flex flex-1 overflow-hidden ${showOverlay ? 'filter blur-2xl pointer-events-none' : ''}`}>
         {/* Left Sidebar: Navigator */}
         <div className="w-64 border-r border-white/10 bg-[#161625] p-4 flex flex-col hidden md:flex">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Question Navigator</p>

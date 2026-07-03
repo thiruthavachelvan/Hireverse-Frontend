@@ -29,12 +29,13 @@ const AssessmentCard = ({ int }) => {
   const isApplicationRejected = int.applicationStatus === 'rejected';
   const isApplicationHired    = int.applicationStatus === 'hired';
   const isCurrentRound        = int.currentRound === int.roundNumber;
+  const isCompleted           = int.assessmentCompleted || int.status === 'Completed' || !!int.attemptId;
 
-  const canStart = isInWindow && isCurrentRound && !isApplicationRejected && !isApplicationHired;
+  const canStart = isInWindow && isCurrentRound && !isApplicationRejected && !isApplicationHired && !isCompleted;
 
   return (
     <div className={`glassmorphism p-6 rounded-2xl border transition-all ${
-      isCurrentRound && !isApplicationRejected && !isApplicationHired
+      isCurrentRound && !isApplicationRejected && !isApplicationHired && !isCompleted
         ? 'border-violet-500/40 ring-1 ring-violet-500/20'
         : 'border-white/5'
     }`}>
@@ -58,10 +59,16 @@ const AssessmentCard = ({ int }) => {
               <span className="text-xs bg-violet-600/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full">
                 {assessmentType}
               </span>
-              {isCurrentRound && !isApplicationRejected && !isApplicationHired && (
+              {isCompleted ? (
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Current Round
+                  Completed ✓
                 </span>
+              ) : (
+                isCurrentRound && !isApplicationRejected && !isApplicationHired && (
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Current Round
+                  </span>
+                )
               )}
             </div>
           </div>
@@ -69,35 +76,50 @@ const AssessmentCard = ({ int }) => {
 
         {/* Timer info */}
         <div className="flex flex-col gap-2 items-start md:items-end text-xs text-gray-400 bg-brand-medium/10 md:bg-transparent p-3 md:p-0 rounded-xl">
-          <div className="flex items-center gap-1.5 text-white font-medium">
-            <FaClock className="text-violet-400" />
-            <span>Duration: {duration} minutes</span>
-          </div>
-          {from && (
-            <div className="flex items-center gap-1.5">
-              <FaCalendarAlt className="text-violet-400 flex-shrink-0" />
-              <span>
-                {from.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                {' – '}
-                {until ? until.toLocaleString('en-IN', { timeStyle: 'short' }) : '...'}
-              </span>
-            </div>
-          )}
-          {/* Window status badge */}
-          {isBeforeWindow && (
-            <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-full font-medium">
-              ⏳ Opens {from.toLocaleString('en-IN', { timeStyle: 'short' })}
-            </span>
-          )}
-          {isInWindow && from && (
-            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-full font-medium animate-pulse">
-              ✅ Window Open Now
-            </span>
-          )}
-          {isAfterWindow && (
-            <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-full font-medium">
-              ❌ Window Closed
-            </span>
+          {isCompleted ? (
+            <>
+              <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                <span>Completed ✓</span>
+              </div>
+              {int.attemptId?.submittedAt && (
+                <div className="text-[10px] text-gray-400">
+                  Submitted: {new Date(int.attemptId.submittedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5 text-white font-medium">
+                <FaClock className="text-violet-400" />
+                <span>Duration: {duration} minutes</span>
+              </div>
+              {from && (
+                <div className="flex items-center gap-1.5">
+                  <FaCalendarAlt className="text-violet-400 flex-shrink-0" />
+                  <span>
+                    {from.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    {' – '}
+                    {until ? until.toLocaleString('en-IN', { timeStyle: 'short' }) : '...'}
+                  </span>
+                </div>
+              )}
+              {/* Window status badge */}
+              {isBeforeWindow && (
+                <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-full font-medium">
+                  ⏳ Opens {from.toLocaleString('en-IN', { timeStyle: 'short' })}
+                </span>
+              )}
+              {isInWindow && from && (
+                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-full font-medium animate-pulse">
+                  ✅ Window Open Now
+                </span>
+              )}
+              {isAfterWindow && (
+                <span className="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-full font-medium">
+                  ❌ Window Closed
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -105,29 +127,38 @@ const AssessmentCard = ({ int }) => {
       {/* Footer */}
       <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
         <p className="text-xs text-gray-500">
-          {!from ? 'Availability window not set yet.' : `Start any time during the window — you'll get ${duration} mins.`}
+          {isCompleted 
+            ? 'You have finished this evaluation round.' 
+            : !from ? 'Availability window not set yet.' : `Start any time during the window — you'll get ${duration} mins.`}
         </p>
-        {isCurrentRound && !isApplicationRejected && !isApplicationHired && (
-          canStart ? (
-            <Link to={`/assessment/job/${int.jobId}/round/${int.roundNumber}/rules`}
-              className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/20 transition-all text-sm flex items-center gap-2">
-              <FaLaptopCode /> Start Test
-            </Link>
-          ) : isBeforeWindow ? (
-            <button disabled
-              className="px-5 py-2.5 bg-amber-500/20 text-amber-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
-              <FaLock /> Not Yet Open
-            </button>
-          ) : isAfterWindow ? (
-            <button disabled
-              className="px-5 py-2.5 bg-red-500/20 text-red-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
-              Window Closed
-            </button>
-          ) : (
-            <button disabled
-              className="px-5 py-2.5 bg-gray-500/20 text-gray-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
-              Start Test
-            </button>
+        {isCompleted ? (
+          <button disabled
+            className="px-5 py-2.5 bg-emerald-500/20 text-emerald-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
+            Completed ✓
+          </button>
+        ) : (
+          isCurrentRound && !isApplicationRejected && !isApplicationHired && (
+            canStart ? (
+              <Link to={`/assessment/job/${int.jobId}/round/${int.roundNumber}/rules`}
+                className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/20 transition-all text-sm flex items-center gap-2">
+                <FaLaptopCode /> Start Test
+              </Link>
+            ) : isBeforeWindow ? (
+              <button disabled
+                className="px-5 py-2.5 bg-amber-500/20 text-amber-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
+                <FaLock /> Not Yet Open
+              </button>
+            ) : isAfterWindow ? (
+              <button disabled
+                className="px-5 py-2.5 bg-red-500/20 text-red-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
+                Window Closed
+              </button>
+            ) : (
+              <button disabled
+                className="px-5 py-2.5 bg-gray-500/20 text-gray-400 font-bold rounded-xl text-sm flex items-center gap-2 cursor-not-allowed opacity-70">
+                Start Test
+              </button>
+            )
           )
         )}
       </div>
@@ -294,6 +325,10 @@ const Interviews = () => {
                 notes:             schedule.interviewConfig?.notes        || schedule.notes || '',
                 applicationStatus: app.status,
                 currentRound:      app.currentRound,
+                // New fields for completion status
+                status:            schedule.status || 'Scheduled',
+                assessmentCompleted: schedule.assessmentCompleted || false,
+                attemptId:         schedule.attemptId || null,
               });
             });
           }

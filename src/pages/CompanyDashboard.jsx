@@ -25,7 +25,7 @@ const StatusChip = ({ status }) => {
 };
 
 // ─── Applicant Card (company view) ──────────────────────────────────────────
-const ApplicantCard = ({ app, job, onAction }) => {
+const ApplicantCard = ({ app, job, onAction, onViewReport }) => {
   const [expanded, setExpanded] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
 
@@ -219,6 +219,47 @@ const ApplicantCard = ({ app, job, onAction }) => {
                     <p className="text-white text-sm leading-relaxed">{fa.answer || <em className="text-gray-500">No answer</em>}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed Assessments list */}
+          {app.roundSchedules?.some(rs => rs.roundType === 'assessment' && rs.attemptId) && (
+            <div className="bg-white/3 rounded-xl p-3 space-y-2 border border-violet-500/20">
+              <p className="text-xs text-violet-400 font-bold uppercase tracking-wider">Completed Assessments</p>
+              <div className="space-y-2">
+                {app.roundSchedules.filter(rs => rs.roundType === 'assessment' && rs.attemptId).map((rs, idx) => {
+                  const att = rs.attemptId;
+                  const pr = att.proctorReportId;
+                  return (
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-[#161625] p-3 rounded-lg border border-white/5">
+                      <div className="space-y-1">
+                        <p className="font-bold text-white">{rs.roundName} ({att.totalQuestions} Qs)</p>
+                        <p className="text-[10px] text-gray-400">Completed: {new Date(att.submittedAt).toLocaleString('en-IN')}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-4 text-center">
+                        <div>
+                          <p className="text-[9px] text-gray-500 uppercase">Score</p>
+                          <p className="font-bold text-sm text-emerald-400">{att.percentage}%</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-gray-500 uppercase">Trust Score</p>
+                          <p className={`font-bold text-sm ${pr?.trustScore >= 80 ? 'text-emerald-400' : pr?.trustScore >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{pr?.trustScore ?? 100}%</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-gray-500 uppercase">Time Taken</p>
+                          <p className="font-bold text-sm text-gray-300">{att.timeTaken} mins</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onViewReport(att.assessmentId || att._id)}
+                        className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-lg text-[10px] transition-colors self-start sm:self-auto"
+                      >
+                        View Assessment Report
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -537,6 +578,25 @@ const CompanyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Proctor Report Modal States
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState(null);
+  const [reportData, setReportData] = useState(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  const handleViewReport = async (assessmentId) => {
+    setSelectedAssessmentId(assessmentId);
+    setShowReportModal(true);
+    setLoadingReport(true);
+    try {
+      const { data } = await api.get(`/assessments/${assessmentId}/report`);
+      setReportData(data);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoadingReport(false);
+  };
 
   useEffect(() => {
     fetchCompanyData();
@@ -939,7 +999,7 @@ const CompanyDashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {applicants.map(app => (
-                    <ApplicantCard key={app._id} app={app} job={activeJob} onAction={handleApplicantAction} />
+                    <ApplicantCard key={app._id} app={app} job={activeJob} onAction={handleApplicantAction} onViewReport={handleViewReport} />
                   ))}
                 </div>
               )}
@@ -1007,6 +1067,200 @@ const CompanyDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* ─── Assessment Report Modal ──────────────────────────────────── */}
+      {showReportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+          onClick={() => { setShowReportModal(false); setReportData(null); }}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 shadow-2xl"
+            style={{ background: 'linear-gradient(135deg,#1a1035 0%,#0f0a20 100%)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-white/10"
+              style={{ background: 'linear-gradient(135deg,#1a1035 0%,#0f0a20 100%)' }}>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-violet-600/20 border border-violet-500/30">
+                  <FaClipboardList className="text-violet-400 text-lg" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Assessment Report</h2>
+                  <p className="text-xs text-gray-400">Detailed evaluation & proctoring data</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowReportModal(false); setReportData(null); }}
+                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <FaTimesCircle className="text-xl" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {loadingReport ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-4">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
+                  <p className="text-gray-400 text-sm">Loading report…</p>
+                </div>
+              ) : !reportData?.attempt ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <FaTimesCircle className="text-4xl text-red-400" />
+                  <p className="text-gray-300 font-semibold">Report not found</p>
+                  <p className="text-xs text-gray-500">The candidate may not have submitted the assessment yet.</p>
+                </div>
+              ) : (() => {
+                const att = reportData.attempt;
+                const pr  = reportData.proctor;
+                const trustScore  = pr?.trustScore ?? 100;
+                const trustColor  = trustScore >= 80 ? '#34d399' : trustScore >= 50 ? '#fbbf24' : '#f87171';
+                const trustBg     = trustScore >= 80 ? 'bg-emerald-500/15 border-emerald-500/30' : trustScore >= 50 ? 'bg-amber-500/15 border-amber-500/30' : 'bg-red-500/15 border-red-500/30';
+
+                return (
+                  <>
+                    {/* Candidate info */}
+                    {att.candidateId && (
+                      <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                        <img
+                          src={att.candidateId.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${att.candidateId.name}`}
+                          alt=""
+                          className="w-12 h-12 rounded-full border-2 border-violet-500/50"
+                        />
+                        <div>
+                          <p className="font-bold text-white">{att.candidateId.name}</p>
+                          <p className="text-xs text-gray-400">{att.candidateId.email}</p>
+                          {att.candidateId.headline && <p className="text-xs text-gray-500 mt-0.5">{att.candidateId.headline}</p>}
+                        </div>
+                        <div className="ml-auto text-right">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Submitted</p>
+                          <p className="text-xs text-gray-300">
+                            {att.submittedAt ? new Date(att.submittedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Score cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Score', value: `${att.percentage}%`, color: att.percentage >= 60 ? 'text-emerald-400' : att.percentage >= 40 ? 'text-amber-400' : 'text-red-400', sub: `${att.correctAnswers}/${att.totalQuestions} correct` },
+                        { label: 'Trust Score', value: `${trustScore}%`, color: trustScore >= 80 ? 'text-emerald-400' : trustScore >= 50 ? 'text-amber-400' : 'text-red-400', sub: trustScore >= 80 ? 'Clean session' : trustScore >= 50 ? 'Minor flags' : 'High risk' },
+                        { label: 'Time Taken', value: `${att.timeTaken}m`, color: 'text-sky-400', sub: 'Minutes used' },
+                        { label: 'Result', value: att.percentage >= 50 ? 'Passed' : 'Failed', color: att.percentage >= 50 ? 'text-emerald-400' : 'text-red-400', sub: 'Cut-off: 50%' },
+                      ].map(card => (
+                        <div key={card.label} className="rounded-xl bg-white/5 border border-white/10 p-4 text-center">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{card.label}</p>
+                          <p className={`text-2xl font-black ${card.color}`}>{card.value}</p>
+                          <p className="text-[10px] text-gray-500 mt-1">{card.sub}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Trust score bar */}
+                    <div className={`rounded-xl p-4 border ${trustBg}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-white">Proctoring Trust Score</p>
+                        <span className="text-lg font-black" style={{ color: trustColor }}>{trustScore}%</span>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-2.5">
+                        <div
+                          className="h-2.5 rounded-full transition-all duration-700"
+                          style={{ width: `${trustScore}%`, background: trustColor }}
+                        />
+                      </div>
+                      {trustScore < 100 && (
+                        <p className="text-xs text-gray-400 mt-2">
+                          {100 - trustScore}% deducted due to security violations during the test.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Violation breakdown */}
+                    {pr && (
+                      <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3">
+                        <p className="text-sm font-semibold text-white mb-2">Security Violation Breakdown</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { label: 'Tab Switches', count: pr.tabSwitchCount || 0, penalty: 10, icon: '⇄' },
+                            { label: 'Fullscreen Exits', count: pr.fullscreenExitCount || 0, penalty: 10, icon: '⛶' },
+                            { label: 'Copy/Paste Attempts', count: pr.copyPasteAttempts || 0, penalty: 5, icon: '⎘' },
+                            { label: 'Right-Click Attempts', count: pr.rightClickAttempts || 0, penalty: 5, icon: '🖱' },
+                          ].map(v => (
+                            <div
+                              key={v.label}
+                              className={`flex items-center gap-3 p-3 rounded-lg border ${
+                                v.count > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/5'
+                              }`}
+                            >
+                              <span className="text-xl">{v.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] text-gray-400 truncate">{v.label}</p>
+                                <p className={`text-lg font-black ${v.count > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{v.count}</p>
+                              </div>
+                              {v.count > 0 && (
+                                <span className="text-[10px] text-red-400 font-bold bg-red-500/10 px-1.5 py-0.5 rounded">-{v.count * v.penalty}%</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {pr.totalTimeOutsideSecureMode > 0 && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <FaHourglassHalf className="text-amber-400" />
+                            <div>
+                              <p className="text-[11px] text-gray-400">Time Outside Secure Mode</p>
+                              <p className="text-sm font-bold text-amber-400">{Math.round(pr.totalTimeOutsideSecureMode / 1000)}s cumulative</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Violations timeline */}
+                        {pr.violations?.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Violation Timeline ({pr.violations.length} events)</p>
+                            <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                              {pr.violations.map((v, i) => (
+                                <div key={i} className="flex items-center gap-2 text-[11px] text-gray-400 bg-white/5 rounded-lg px-3 py-1.5">
+                                  <span className="text-red-400 font-mono">{String(i + 1).padStart(2, '0')}</span>
+                                  <span className="flex-1">{v.type?.replace(/_/g, ' ')}</span>
+                                  <span className="text-gray-500">{v.timestamp ? new Date(v.timestamp).toLocaleTimeString('en-IN', { timeStyle: 'short' }) : ''}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Answer summary */}
+                    <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                      <p className="text-sm font-semibold text-white mb-3">Answer Summary</p>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 bg-white/10 rounded-full h-3 overflow-hidden">
+                          <div
+                            className="h-3 bg-emerald-500 rounded-full"
+                            style={{ width: `${att.percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-400 w-20 text-right">{att.correctAnswers} correct · {att.wrongAnswers} wrong</span>
+                      </div>
+                      <div className="flex gap-4 mt-3 text-xs">
+                        <span className="flex items-center gap-1.5 text-emerald-400"><FaCheckCircle /> {att.correctAnswers} Correct</span>
+                        <span className="flex items-center gap-1.5 text-red-400"><FaTimesCircle /> {att.wrongAnswers} Wrong</span>
+                        <span className="flex items-center gap-1.5 text-gray-400">/ {att.totalQuestions} Total</span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
