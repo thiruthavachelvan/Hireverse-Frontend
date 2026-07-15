@@ -739,31 +739,31 @@ const CompanyDashboard = () => {
           {user.verificationStatus === 'pending' && (
             <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3 text-amber-300 text-sm flex items-start gap-2">
               <FaHourglassHalf className="mt-0.5 flex-shrink-0" />
-              <span>Your company is <strong>pending verification</strong>. Candidates cannot see your jobs yet. You will be able to post jobs once you are approved by the administrator.</span>
+              <span>Your startup is <strong>pending verification</strong>. Builders cannot see your opportunities yet. You will be able to post opportunities once you are approved by the administrator.</span>
             </div>
           )}
           {user.verificationStatus === 'rejected' && (
             <div className="bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3 text-red-300 text-sm flex items-start gap-2">
               <FaTimesCircle className="mt-0.5 flex-shrink-0" />
-              <span>Your company verification has been <strong>rejected</strong>. Please contact support.</span>
+              <span>Your startup verification has been <strong>rejected</strong>. Please contact support.</span>
             </div>
           )}
           {user.verificationStatus === 'verified' && (
             <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl px-4 py-3 text-emerald-300 text-sm flex items-center gap-2">
-              <MdVerified /><span>Your company is <strong>HireVerse Verified</strong>!</span>
+              <MdVerified /><span>Your startup is <strong>HireVerse Verified</strong>!</span>
             </div>
           )}
 
           <div className="glassmorphism p-6 rounded-2xl">
             <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
-              <FaBullhorn className="text-brand-purple" /><span>Upcoming Hiring Info</span>
+              <FaBullhorn className="text-brand-purple" /><span>Startup Hiring Info</span>
             </h2>
             <form onSubmit={handleUpdateHiringInfo} className="space-y-3">
-              <p className="text-xs text-gray-400">Share your company's upcoming hiring plans, off-campus drives, or general recruitment schedules. Candidates visiting your profile will see this.</p>
+              <p className="text-xs text-gray-400">Share your startup's upcoming hiring plans, off-campus drives, or general recruitment schedules. Builders visiting your profile will see this.</p>
               <textarea
                 value={hiringInfo}
                 onChange={e => setHiringInfo(e.target.value)}
-                placeholder="e.g. We are planning an off-campus drive for 2025 graduates in December..."
+                placeholder="e.g. We are planning a hiring sprint for junior backend engineers in December..."
                 className="w-full bg-brand-medium/30 border border-brand-medium rounded-xl p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-purple min-h-[80px] resize-none"
               />
               <div className="flex items-center gap-3">
@@ -772,16 +772,64 @@ const CompanyDashboard = () => {
                   disabled={updatingHiringInfo}
                   className="px-4 py-2 bg-brand-purple hover:bg-opacity-95 font-semibold text-xs rounded-xl transition-all disabled:opacity-50"
                 >
-                  {updatingHiringInfo ? 'Saving...' : 'Save Info'}
+                  {updatingHiringInfo ? 'Save Info' : 'Save Info'}
                 </button>
                 {hiringToast && <span className={`text-xs font-medium ${hiringToast.includes('✓') ? 'text-emerald-400' : 'text-red-400'}`}>{hiringToast}</span>}
               </div>
             </form>
           </div>
 
+          {/* Featured Startup Video widget */}
+          <div className="glassmorphism p-6 rounded-2xl space-y-4 border border-violet-500/20">
+            <h2 className="text-base font-bold flex items-center space-x-2 text-violet-300">
+              <span>🎬</span><span>Featured Startup Video</span>
+            </h2>
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-white/10 group cursor-pointer" onClick={() => window.open('https://www.youtube.com/watch?v=P6Ff585K8bM', '_blank')}>
+              <iframe
+                src="https://www.youtube.com/embed/P6Ff585K8bM"
+                title="Featured Startup"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                className="w-full h-full pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center text-violet-600">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 font-semibold leading-relaxed">
+              <strong>Life at a tech startup:</strong> Insights from leading developers on how founding engineers scale platforms.
+            </p>
+          </div>
+
+          {/* Weekly Founder Spotlight widget */}
+          <div className="glassmorphism p-6 rounded-2xl space-y-4 border border-violet-500/20">
+            <h2 className="text-base font-bold flex items-center space-x-2 text-violet-300">
+              <span>💡</span><span>Weekly Founder Spotlight</span>
+            </h2>
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-white/10 group cursor-pointer" onClick={() => window.open('https://www.youtube.com/watch?v=KeF1E2Xm6zM', '_blank')}>
+              <iframe
+                src="https://www.youtube.com/embed/KeF1E2Xm6zM"
+                title="Founder Spotlight"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                className="w-full h-full pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center text-violet-600">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 font-semibold leading-relaxed">
+              <strong>Scaling 0 to 1:</strong> How early-stage founders pitch, validate, and hire builders for their products.
+            </p>
+          </div>
+
           <div className="glassmorphism p-6 rounded-2xl">
             <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
-              <FaPlusCircle className="text-brand-purple" /><span>Post a New Job</span>
+              <FaPlusCircle className="text-brand-purple" /><span>Post a New Opportunity</span>
             </h2>
 
             {user.verificationStatus !== 'verified' ? (
@@ -911,7 +959,7 @@ const CompanyDashboard = () => {
                     onChange={e => setJobForm({ ...jobForm, shareToFeed: e.target.checked })}
                     className="accent-brand-purple w-4 h-4"
                   />
-                  Share job to feed and notify followers
+                  Share opportunity to feed and notify builders
                 </label>
 
                 <button
@@ -919,7 +967,7 @@ const CompanyDashboard = () => {
                   disabled={actionLoading}
                   className="w-full py-2.5 bg-brand-purple hover:bg-opacity-95 font-semibold text-sm rounded-xl transition-all disabled:opacity-50 shadow-md shadow-brand-purple/20"
                 >
-                  {actionLoading ? 'Creating...' : 'Publish Job Listing'}
+                  {actionLoading ? 'Publishing...' : 'Publish Opportunity'}
                 </button>
               </form>
             )}
@@ -930,14 +978,14 @@ const CompanyDashboard = () => {
         <div className="lg:col-span-2 space-y-6">
           <h2 className="text-2xl font-bold flex items-center space-x-2">
             <FaBriefcase className="text-brand-purple" />
-            <span>Your Jobs ({jobs.length})</span>
+            <span>Your Opportunities ({jobs.length})</span>
           </h2>
 
           {jobs.length === 0 ? (
             <div className="glassmorphism p-10 rounded-2xl text-center text-gray-400">
               <FaBriefcase className="w-10 h-10 mx-auto mb-3 text-gray-600" />
-              <p className="text-lg">No job openings created yet.</p>
-              <p className="text-sm mt-1">Use the form on the left to post a job opportunity.</p>
+              <p className="text-lg">No opportunities created yet.</p>
+              <p className="text-sm mt-1">Use the form on the left to post an opportunity.</p>
             </div>
           ) : (
             <div className="space-y-4">

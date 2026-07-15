@@ -4,7 +4,8 @@ import api from '../services/api';
 import { 
   UserPen, Save, X, List, Info, Briefcase, GraduationCap, 
   BadgeCheck, Plus, Trash2, FileText, UploadCloud, CheckCircle, 
-  Users, Sparkles, BookOpen
+  Users, Sparkles, BookOpen, Globe, MapPin, Calendar, Rocket, 
+  Video, Eye, Heart, Camera, Megaphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -21,6 +22,20 @@ const Profile = () => {
     college: '',
     cgpa: '',
     certifications: '',
+    // company / startup details
+    website: '',
+    industry: '',
+    size: '11-25',
+    location: '',
+    description: '',
+    upcomingHiring: '',
+    startupStage: 'Seed',
+    foundedYear: '',
+    founders: '',
+    vision: '',
+    startupCulture: '',
+    videos: '',
+    officePhotos: '',
   });
 
   const [workExperience, setWorkExperience] = useState([]);
@@ -135,6 +150,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
+      const details = user.companyDetails || {};
       setProfileData({
         headline: user.headline || '',
         bio: user.bio || '',
@@ -144,6 +160,20 @@ const Profile = () => {
         college: user.education?.college || '',
         cgpa: user.education?.cgpa || '',
         certifications: user.education?.certifications ? user.education.certifications.join(', ') : '',
+        // company fields
+        website: details.website || '',
+        industry: details.industry || '',
+        size: details.size || '11-25',
+        location: details.location || '',
+        description: details.description || '',
+        upcomingHiring: details.upcomingHiring || '',
+        startupStage: details.startupStage || 'Seed',
+        foundedYear: details.foundedYear || '',
+        founders: details.founders || '',
+        vision: details.vision || '',
+        startupCulture: details.startupCulture || '',
+        videos: details.videos ? details.videos.join(', ') : '',
+        officePhotos: details.officePhotos ? details.officePhotos.join(', ') : '',
       });
       setWorkExperience(user.workExperience || []);
       fetchDetailedProfile();
@@ -168,6 +198,7 @@ const Profile = () => {
     setIsEditing(!isEditing);
     setError(''); setSuccess('');
     if (!isEditing && user) {
+      const details = user.companyDetails || {};
       setProfileData({
         headline: user.headline || '',
         bio: user.bio || '',
@@ -177,6 +208,20 @@ const Profile = () => {
         college: user.education?.college || '',
         cgpa: user.education?.cgpa || '',
         certifications: user.education?.certifications ? user.education.certifications.join(', ') : '',
+        // company fields
+        website: details.website || '',
+        industry: details.industry || '',
+        size: details.size || '11-25',
+        location: details.location || '',
+        description: details.description || '',
+        upcomingHiring: details.upcomingHiring || '',
+        startupStage: details.startupStage || 'Seed',
+        foundedYear: details.foundedYear || '',
+        founders: details.founders || '',
+        vision: details.vision || '',
+        startupCulture: details.startupCulture || '',
+        videos: details.videos ? details.videos.join(', ') : '',
+        officePhotos: details.officePhotos ? details.officePhotos.join(', ') : '',
       });
       setWorkExperience(user.workExperience || []);
     }
@@ -202,6 +247,13 @@ const Profile = () => {
     setSaveLoading(true);
     setError(''); setSuccess('');
 
+    // Check size limit validation for startups
+    if (user.accountType === 'company' && profileData.size === 'Above 500') {
+      setError('HireVerse currently supports startup companies only.');
+      setSaveLoading(false);
+      return;
+    }
+
     const skillsArray = profileData.skills
       .split(',')
       .map(s => s.trim())
@@ -225,6 +277,24 @@ const Profile = () => {
           .filter(c => c !== ''),
       };
       submissionData.workExperience = workExperience.filter(exp => exp.company.trim() && exp.role.trim());
+    }
+
+    if (user.accountType === 'company') {
+      submissionData.companyDetails = {
+        website: profileData.website,
+        industry: profileData.industry,
+        size: profileData.size,
+        description: profileData.description,
+        location: profileData.location,
+        upcomingHiring: profileData.upcomingHiring,
+        startupStage: profileData.startupStage,
+        foundedYear: profileData.foundedYear,
+        founders: profileData.founders,
+        vision: profileData.vision,
+        startupCulture: profileData.startupCulture,
+        videos: profileData.videos.split(',').map(v => v.trim()).filter(v => v !== ''),
+        officePhotos: profileData.officePhotos.split(',').map(p => p.trim()).filter(p => p !== ''),
+      };
     }
 
     const res = await updateProfile(submissionData);
@@ -305,9 +375,9 @@ const Profile = () => {
                 className="w-28 h-28 rounded-3xl border-4 border-white bg-white shadow-lg overflow-hidden flex-shrink-0 relative group"
               >
                 <img
-                  src={user.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}`}
+                  src={user.profileImage || `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(user.name)}`}
                   alt={user.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 animate-fade-in"
                 />
               </motion.div>
 
@@ -317,7 +387,7 @@ const Profile = () => {
                     <h1 className="text-3xl font-black text-hv-text leading-tight">{user.name}</h1>
                     <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
                       <span className="chip chip-violet uppercase text-[9px] px-2 py-0">
-                        {user.accountType}
+                        {isProfessional ? 'Builder' : 'Startup'}
                       </span>
                       {isProfessional && user.employmentStatus && (
                         <span className={`chip text-[9px] px-2 py-0 uppercase ${
@@ -327,6 +397,11 @@ const Profile = () => {
                         }`}>
                           {user.employmentStatus === 'employed' ? 'Employed' :
                            user.employmentStatus === 'recently_left' ? 'Recently Left' : 'Open to work'}
+                        </span>
+                      )}
+                      {!isProfessional && user.companyDetails?.startupStage && (
+                        <span className="chip chip-warning text-[9px] px-2 py-0 uppercase">
+                          {user.companyDetails.startupStage}
                         </span>
                       )}
                     </div>
@@ -345,13 +420,18 @@ const Profile = () => {
                   )}
                 </div>
 
+                {/* Profile fields presentation mode */}
                 {!isEditing ? (
                   <div className="pt-2">
                     <p className="text-base text-hv-violet font-bold leading-snug">
-                      {user.headline || 'No headline set yet'}
+                      {isProfessional 
+                        ? (user.headline || 'No headline set yet')
+                        : `${user.companyDetails?.industry || 'Tech'} Startup · ${user.companyDetails?.location || 'Remote'}`}
                     </p>
                     <p className="text-sm text-hv-muted max-w-2xl leading-relaxed mt-2">
-                      {user.bio || 'Write a short bio to tell others about yourself.'}
+                      {isProfessional
+                        ? (user.bio || 'Write a short bio to tell others about yourself.')
+                        : (user.companyDetails?.description || user.bio || 'Provide a mission description for your startup.')}
                     </p>
                   </div>
                 ) : (
@@ -368,7 +448,7 @@ const Profile = () => {
                           className="input-field py-2 text-xs"
                         />
                       </div>
-                      {isProfessional && (
+                      {isProfessional ? (
                         <div>
                           <label className="block text-xs font-semibold text-hv-muted mb-1.5">Employment Status</label>
                           <select
@@ -381,40 +461,202 @@ const Profile = () => {
                             <option value="recently_left">Recently Left / Transitioning</option>
                           </select>
                         </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-semibold text-hv-muted mb-1.5">Startup Stage</label>
+                          <select
+                            value={profileData.startupStage}
+                            onChange={(e) => setProfileData({ ...profileData, startupStage: e.target.value })}
+                            className="input-field py-2 text-xs"
+                          >
+                            <option value="Bootstrapped">Bootstrapped</option>
+                            <option value="Pre-Seed">Pre-Seed</option>
+                            <option value="Seed">Seed</option>
+                            <option value="Series A">Series A</option>
+                            <option value="Series B">Series B</option>
+                          </select>
+                        </div>
                       )}
                     </div>
 
-                    <div className="text-left">
-                      <label className="block text-xs font-semibold text-hv-muted mb-1.5">Professional Headline</label>
-                      <input
-                        type="text"
-                        value={profileData.headline}
-                        onChange={(e) => setProfileData({ ...profileData, headline: e.target.value })}
-                        placeholder="e.g. Lead Frontend Engineer at Acme Corp"
-                        className="input-field py-2 text-xs"
-                      />
-                    </div>
+                    {isProfessional && (
+                      <div className="text-left">
+                        <label className="block text-xs font-semibold text-hv-muted mb-1.5">Professional Headline</label>
+                        <input
+                          type="text"
+                          value={profileData.headline}
+                          onChange={(e) => setProfileData({ ...profileData, headline: e.target.value })}
+                          placeholder="e.g. Lead Frontend Engineer at Acme Corp"
+                          className="input-field py-2 text-xs"
+                        />
+                      </div>
+                    )}
 
                     <div className="text-left">
-                      <label className="block text-xs font-semibold text-hv-muted mb-1.5">Workspace Bio</label>
+                      <label className="block text-xs font-semibold text-hv-muted mb-1.5">
+                        {isProfessional ? 'Workspace Bio' : 'Startup Description / Mission'}
+                      </label>
                       <textarea
-                        value={profileData.bio}
-                        onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                        placeholder="Share your goals, career background, and what you are building."
+                        value={isProfessional ? profileData.bio : profileData.description}
+                        onChange={(e) => isProfessional 
+                          ? setProfileData({ ...profileData, bio: e.target.value })
+                          : setProfileData({ ...profileData, description: e.target.value })
+                        }
+                        placeholder={isProfessional 
+                          ? "Share your goals, career background, and what you are building."
+                          : "Tell builders about your startup's mission and purpose..."
+                        }
                         className="input-field min-h-[90px] resize-none py-2 text-xs"
                       />
                     </div>
 
-                    <div className="text-left">
-                      <label className="block text-xs font-semibold text-hv-muted mb-1.5">Skills (Comma-separated)</label>
-                      <input
-                        type="text"
-                        value={profileData.skills}
-                        onChange={(e) => setProfileData({ ...profileData, skills: e.target.value })}
-                        placeholder="e.g. React, Mongoose, Express, Python"
-                        className="input-field py-2 text-xs"
-                      />
-                    </div>
+                    {isProfessional && (
+                      <div className="text-left">
+                        <label className="block text-xs font-semibold text-hv-muted mb-1.5">Skills (Comma-separated)</label>
+                        <input
+                          type="text"
+                          value={profileData.skills}
+                          onChange={(e) => setProfileData({ ...profileData, skills: e.target.value })}
+                          placeholder="e.g. React, Mongoose, Express, Python"
+                          className="input-field py-2 text-xs"
+                        />
+                      </div>
+                    )}
+
+                    {/* Startup Details (Website, Location, Employees) */}
+                    {!isProfessional && (
+                      <div className="border-t border-gray-100 pt-4 space-y-4 text-left">
+                        <h3 className="text-sm font-bold gradient-text">Startup Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Website</label>
+                            <input
+                              type="text"
+                              value={profileData.website}
+                              onChange={(e) => setProfileData({ ...profileData, website: e.target.value })}
+                              placeholder="https://acme.io"
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Industry</label>
+                            <input
+                              type="text"
+                              value={profileData.industry}
+                              onChange={(e) => setProfileData({ ...profileData, industry: e.target.value })}
+                              placeholder="e.g. AI / SaaS"
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Location</label>
+                            <input
+                              type="text"
+                              value={profileData.location}
+                              onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+                              placeholder="e.g. Bangalore"
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Employees Size</label>
+                            <select
+                              value={profileData.size}
+                              onChange={(e) => setProfileData({ ...profileData, size: e.target.value })}
+                              className="input-field py-2 text-xs"
+                            >
+                              {['1-10', '11-25', '26-50', '51-100', '101-250', '251-500', 'Above 500'].map(val => (
+                                <option key={val} value={val}>
+                                  {val === 'Above 500' ? 'Above 500 (Not supported)' : `${val} employees`}
+                                </option>
+                              ))}
+                            </select>
+                            {profileData.size === 'Above 500' && (
+                              <p className="text-red-500 font-bold text-[10px] mt-1">Startup size limit is 500 employees.</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Founded Year</label>
+                            <input
+                              type="text"
+                              value={profileData.foundedYear}
+                              onChange={(e) => setProfileData({ ...profileData, foundedYear: e.target.value })}
+                              placeholder="e.g. 2024"
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Founders</label>
+                            <input
+                              type="text"
+                              value={profileData.founders}
+                              onChange={(e) => setProfileData({ ...profileData, founders: e.target.value })}
+                              placeholder="Founder Names"
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Vision Statement</label>
+                            <input
+                              type="text"
+                              value={profileData.vision}
+                              onChange={(e) => setProfileData({ ...profileData, vision: e.target.value })}
+                              placeholder="To build the next-gen web platform..."
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Culture Description</label>
+                            <input
+                              type="text"
+                              value={profileData.startupCulture}
+                              onChange={(e) => setProfileData({ ...profileData, startupCulture: e.target.value })}
+                              placeholder="High ownership, builder energy..."
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">YouTube Video Links (Comma-separated)</label>
+                            <input
+                              type="text"
+                              value={profileData.videos}
+                              onChange={(e) => setProfileData({ ...profileData, videos: e.target.value })}
+                              placeholder="e.g. https://www.youtube.com/embed/vidId"
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-hv-muted mb-1.5">Office Photos (Comma-separated URLs)</label>
+                            <input
+                              type="text"
+                              value={profileData.officePhotos}
+                              onChange={(e) => setProfileData({ ...profileData, officePhotos: e.target.value })}
+                              placeholder="Image URLs"
+                              className="input-field py-2 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-hv-muted mb-1.5">Hiring Updates / Upcoming Drives</label>
+                          <textarea
+                            value={profileData.upcomingHiring}
+                            onChange={(e) => setProfileData({ ...profileData, upcomingHiring: e.target.value })}
+                            placeholder="Tell candidates about active hiring drives..."
+                            className="input-field min-h-[60px] resize-none py-2 text-xs"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Educational details for professional users */}
                     {isProfessional && (
@@ -579,7 +821,7 @@ const Profile = () => {
               <div className="card p-6 flex items-center justify-between gap-4">
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-hv-text">Profile Strength</h3>
-                  <p className="text-xs text-hv-muted">Completing profiles gets 3x more recruiters.</p>
+                  <p className="text-xs text-hv-muted">Completing profiles gets 3x more views.</p>
                 </div>
                 <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
                   <svg className="w-16 h-16 -rotate-95">
@@ -605,22 +847,24 @@ const Profile = () => {
               </div>
 
               {/* Skills */}
-              <div className="card p-6 space-y-4">
-                <h3 className="text-sm font-bold text-hv-text flex items-center gap-1.5">
-                  <List size={16} className="text-hv-violet" /> Skills
-                </h3>
-                {user.skills && user.skills.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {user.skills.map((skill, index) => (
-                      <span key={index} className="chip chip-violet font-semibold text-[10px]">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-hv-muted italic">No skills listed yet.</p>
-                )}
-              </div>
+              {isProfessional && (
+                <div className="card p-6 space-y-4">
+                  <h3 className="text-sm font-bold text-hv-text flex items-center gap-1.5">
+                    <List size={16} className="text-hv-violet" /> Skills
+                  </h3>
+                  {user.skills && user.skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {user.skills.map((skill, index) => (
+                        <span key={index} className="chip chip-violet font-semibold text-[10px]">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-hv-muted italic">No skills listed yet.</p>
+                  )}
+                </div>
+              )}
 
               {/* Education */}
               {isProfessional && (
@@ -827,19 +1071,41 @@ const Profile = () => {
                   )}
                 </div>
               ) : (
-                /* Company Overview block */
+                /* Startup Profile Preview block */
                 <div className="card p-6 space-y-4">
-                  <h3 className="text-sm font-bold text-hv-text flex items-center gap-1.5">
-                    <BookOpen size={16} className="text-hv-violet" /> Company Workspace Overview
+                  <h3 className="text-sm font-bold text-hv-text flex items-center gap-1.5 border-b border-gray-50 pb-2">
+                    <BookOpen size={16} className="text-hv-violet" /> Startup Details Preview
                   </h3>
-                  <p className="text-xs text-hv-muted italic">Configure open positions, verify candidates, and publish hiring drives.</p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
+                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                      <p className="text-[10px] uppercase tracking-wider text-hv-subtle mb-0.5">Founders</p>
+                      <p className="text-hv-text font-bold">{user.companyDetails?.founders || 'Not specified'}</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                      <p className="text-[10px] uppercase tracking-wider text-hv-subtle mb-0.5">Founded Year</p>
+                      <p className="text-hv-text font-bold">{user.companyDetails?.foundedYear || 'Not specified'}</p>
+                    </div>
+                    {user.companyDetails?.vision && (
+                      <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl sm:col-span-2">
+                        <p className="text-[10px] uppercase tracking-wider text-hv-subtle mb-0.5">Vision Statement</p>
+                        <p className="text-hv-muted leading-relaxed font-medium italic">"{user.companyDetails.vision}"</p>
+                      </div>
+                    )}
+                    {user.companyDetails?.startupCulture && (
+                      <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl sm:col-span-2">
+                        <p className="text-[10px] uppercase tracking-wider text-hv-subtle mb-0.5">Culture & Energy</p>
+                        <p className="text-hv-muted leading-relaxed font-medium">{user.companyDetails.startupCulture}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
               {/* Connections/Followers Grid */}
               <div className="card p-6 space-y-4">
                 <h3 className="text-sm font-bold text-hv-text flex items-center gap-1.5">
-                  <Users size={16} className="text-hv-violet" /> Career Network Contacts
+                  <Users size={16} className="text-hv-violet" /> Network Contacts
                 </h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">

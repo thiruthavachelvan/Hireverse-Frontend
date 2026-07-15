@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const VerifiedBadge = ({ status }) => {
   if (status === 'verified') return (
     <span className="flex items-center gap-1 text-xs bg-emerald-50 text-emerald-600 border border-emerald-100 px-2.5 py-1 rounded-full font-bold">
-      <CheckCircle2 size={13} className="text-emerald-500" /> HireVerse Partner
+      <CheckCircle2 size={13} className="text-emerald-500" /> Startup Partner
     </span>
   );
   return (
@@ -188,7 +188,7 @@ const JobDetail = () => {
           onClick={() => navigate('/jobs')}
           className="flex items-center gap-1.5 text-hv-muted hover:text-hv-text transition-colors text-sm font-semibold cursor-pointer"
         >
-          <ArrowLeft size={15} /> Back to Jobs
+          <ArrowLeft size={15} /> Back to Opportunities
         </button>
 
         {/* Success Banner */}
@@ -197,17 +197,17 @@ const JobDetail = () => {
             <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5 text-emerald-600" />
             <div>
               <p className="font-bold text-sm">Application submitted successfully!</p>
-              <p className="text-xs text-emerald-600/80 mt-0.5 font-medium">The company will review your answers and contact you shortly.</p>
+              <p className="text-xs text-emerald-600/80 mt-0.5 font-medium font-sans">The founding team will review your profile details and reach out.</p>
             </div>
           </div>
         )}
 
-        {/* Job Header Card */}
+        {/* Opportunity Header Card */}
         <div className="card-static p-6 space-y-5">
           <div className="flex flex-col md:flex-row md:items-start gap-4 justify-between">
             <div className="flex items-start gap-4">
               <img
-                src={company?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(company?.name || '')}`}
+                src={company?.profileImage || `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(company?.name || '')}`}
                 alt={company?.name}
                 className="w-14 h-14 rounded-2xl border border-gray-100 bg-gray-50 object-contain flex-shrink-0"
               />
@@ -224,14 +224,14 @@ const JobDetail = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 text-xs">
+          <div className="flex flex-wrap gap-3 text-xs font-semibold">
             <span className="chip chip-gray">
               <MapPin size={11} className="text-hv-subtle" /> {job.location}
             </span>
             <span className="chip chip-success font-bold">
               <DollarSign size={11} /> {job.salary}
             </span>
-            <span className="chip chip-violet font-semibold">
+            <span className="chip chip-violet">
               <Briefcase size={11} /> {job.jobType}
             </span>
             <span className="chip chip-coral">
@@ -248,7 +248,7 @@ const JobDetail = () => {
                 </div>
               ) : !job.isActive ? (
                 <div className="flex items-center gap-1.5 px-4 py-2 bg-gray-50 border border-gray-200 text-hv-muted rounded-xl text-xs font-bold">
-                  <XCircle size={14} /> This job listing is closed
+                  <XCircle size={14} /> This opportunity is closed
                 </div>
               ) : (
                 <button
@@ -269,8 +269,8 @@ const JobDetail = () => {
             
             {/* Description */}
             <div className="card-static p-6 space-y-4">
-              <h2 className="text-lg font-bold text-hv-text">Job Description</h2>
-              <p className="text-hv-muted text-sm leading-relaxed whitespace-pre-wrap">{job.description}</p>
+              <h2 className="text-lg font-bold text-hv-text">Opportunity Description</h2>
+              <p className="text-hv-muted text-sm leading-relaxed whitespace-pre-wrap font-medium">{job.description}</p>
             </div>
 
             {/* Required Skills */}
@@ -281,7 +281,7 @@ const JobDetail = () => {
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
                   {job.requiredSkills.map(skill => (
-                    <span key={skill} className="chip chip-violet font-semibold text-xs py-1 px-3">
+                    <span key={skill} className="chip chip-violet font-bold text-xs py-1 px-3">
                       {skill}
                     </span>
                   ))}
@@ -320,7 +320,7 @@ const JobDetail = () => {
                 <Layers size={18} className="text-hv-violet" /> Hiring Process
               </h2>
               {job.rounds?.length === 0 ? (
-                <p className="text-xs text-hv-muted italic">No hiring rounds specified.</p>
+                <p className="text-xs text-hv-muted italic font-medium">No hiring rounds specified.</p>
               ) : (
                 <div className="relative pl-4 space-y-4">
                   {job.rounds.map((round, idx) => (
@@ -341,18 +341,24 @@ const JobDetail = () => {
 
             {/* About Company Mini Card */}
             <div className="card-static p-6 space-y-4">
-              <h2 className="text-lg font-bold text-hv-text">About the Company</h2>
-              <div className="space-y-2.5 text-xs text-hv-muted">
-                {company?.companyDetails?.industry && <p><strong className="text-hv-text">Industry:</strong> {company.companyDetails.industry}</p>}
-                {company?.companyDetails?.size && <p><strong className="text-hv-text">Size:</strong> {company.companyDetails.size} employees</p>}
+              <h2 className="text-lg font-bold text-hv-text">About the Startup</h2>
+              <div className="space-y-2.5 text-xs text-hv-muted font-semibold">
+                {company?.companyDetails?.industry && <p><strong className="text-hv-text font-bold">Industry:</strong> {company.companyDetails.industry}</p>}
+                {company?.companyDetails?.startupStage && <p><strong className="text-hv-text font-bold">Stage:</strong> {company.companyDetails.startupStage}</p>}
+                {company?.companyDetails?.size && <p><strong className="text-hv-text font-bold">Size:</strong> {company.companyDetails.size} builders</p>}
+                {company?.companyDetails?.founders && <p><strong className="text-hv-text font-bold">Founders:</strong> {company.companyDetails.founders}</p>}
                 {company?.companyDetails?.website && (
                   <p>
-                    <a href={company.companyDetails.website} target="_blank" rel="noopener noreferrer" className="text-hv-violet hover:opacity-80 underline flex items-center gap-1 font-bold">
+                    <a href={company.companyDetails.website} target="_blank" rel="noopener noreferrer" className="text-hv-violet hover:opacity-85 underline flex items-center gap-1 font-bold">
                       Visit Website <ExternalLink size={10} />
                     </a>
                   </p>
                 )}
-                {company?.bio && <p className="pt-2 border-t border-gray-100 leading-relaxed text-hv-muted">{company.bio}</p>}
+                {(company?.companyDetails?.description || company?.bio) && (
+                  <p className="pt-2.5 border-t border-gray-100 leading-relaxed font-medium text-hv-muted">
+                    {company.companyDetails?.description || company.bio}
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -129,8 +129,8 @@ const AssessmentCard = ({ int }) => {
       <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center gap-4 flex-wrap">
         <p className="text-xs text-hv-muted leading-relaxed max-w-sm">
           {isCompleted 
-            ? 'Evaluation round finished successfully.' 
-            : !from ? 'Waiting for company availability window.' : `Start any time during the window — test duration is ${duration} mins.`}
+            ? 'Evaluation round completed successfully.' 
+            : !from ? 'Waiting for the startup team to set an availability window.' : `Start any time during the window — test duration is ${duration} mins.`}
         </p>
         
         {isCompleted ? (
@@ -255,7 +255,7 @@ const InterviewCard = ({ int }) => {
 
       {/* Footer */}
       <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center gap-4 flex-wrap text-xs">
-        <span className="text-hv-subtle font-semibold">Interviews scheduled on HireVerse</span>
+        <span className="text-hv-subtle font-semibold">Startup round scheduled on HireVerse</span>
         <div className="flex items-center gap-3">
           {meetingLink && (
             <a href={meetingLink} target="_blank" rel="noreferrer"
@@ -427,7 +427,7 @@ const Interviews = () => {
             </div>
             {activeTab === 'upcoming' && (
               <Link to="/jobs" className="btn-primary inline-flex py-2.5 text-xs">
-                Browse Active Jobs <Sparkles size={13} />
+                Browse Opportunities <Sparkles size={13} />
               </Link>
             )}
           </div>

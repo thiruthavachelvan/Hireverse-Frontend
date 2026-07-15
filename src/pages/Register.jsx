@@ -273,7 +273,7 @@ const Register = () => {
     employmentStatus: 'unemployed',
     website: '',
     industry: '',
-    size: '11-50',
+    size: '11-25',
     location: '',
     description: '',
   });
@@ -300,6 +300,12 @@ const Register = () => {
     const { name, email, password, accountType, employmentStatus, website, industry, size, location, description } = formData;
     if (!name || !email || !password || !accountType) {
       setError('Please fill in all basic fields.');
+      setLoading(false);
+      return;
+    }
+
+    if (accountType === 'company' && size === 'Above 500') {
+      setError('HireVerse currently supports startup companies only.');
       setLoading(false);
       return;
     }
@@ -343,12 +349,12 @@ const Register = () => {
 
         <div className="relative z-10 flex flex-col items-start">
           <h2 className="font-black text-4xl text-hv-text leading-tight mb-4">
-            Build your profile,<br />
-            prove your skills,<br />
-            <span className="gradient-text">belong anywhere.</span>
+            Build the Next<br />
+            Unicorn.<br />
+            <span className="gradient-text">Where Startups Meet Builders.</span>
           </h2>
           <p className="text-hv-muted text-lg leading-relaxed max-w-sm mb-8">
-            Join the community of modern professionals and forward-thinking companies.
+            Discover ambitious startups. Show your skills. Build products that matter.
           </p>
 
           {/* Animated SVG Illustration */}
@@ -575,11 +581,18 @@ const Register = () => {
                           onChange={handleChange}
                           className="input-field pl-11 text-sm"
                         >
-                          {['1-10', '11-50', '51-200', '201-500', '500-1000', '1000-5000', '5000+'].map(val => (
-                            <option key={val} value={val}>{val} employees</option>
+                          {['1-10', '11-25', '26-50', '51-100', '101-250', '251-500', 'Above 500'].map(val => (
+                            <option key={val} value={val}>
+                              {val === 'Above 500' ? 'Above 500 (Not supported)' : `${val} employees`}
+                            </option>
                           ))}
                         </select>
                       </div>
+                      {formData.size === 'Above 500' && (
+                        <p className="text-red-500 font-semibold text-[11px] mt-1.5 animate-pulse">
+                          HireVerse currently supports startup companies only.
+                        </p>
+                      )}
                     </div>
 
                     <div>

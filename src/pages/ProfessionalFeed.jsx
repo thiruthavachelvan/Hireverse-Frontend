@@ -170,7 +170,7 @@ const ProfessionalFeed = () => {
                 <textarea
                   value={postContent}
                   onChange={e => setPostContent(e.target.value)}
-                  placeholder="Share what's happening on your career journey..."
+                  placeholder="Share what you're building, launching, or learning..."
                   className="input-field min-h-[90px] text-sm resize-none pt-2"
                   required
                 />
@@ -198,7 +198,7 @@ const ProfessionalFeed = () => {
             <div className="card p-12 text-center text-hv-muted space-y-2">
               <Users size={40} className="mx-auto text-hv-subtle animate-float" />
               <p className="font-bold text-hv-text">Your feed is quiet</p>
-              <p className="text-sm">Be the first to post an update or follow people to get started!</p>
+              <p className="text-sm">Be the first to share an update, or follow builders and startups to get started!</p>
             </div>
           ) : (
             <motion.div
@@ -238,7 +238,7 @@ const ProfessionalFeed = () => {
                               {post.userId?.name}
                             </Link>
                             {isCompanyPost && (
-                              <span className="chip chip-coral text-[9px] px-1 py-0">Company</span>
+                              <span className="chip chip-coral text-[9px] px-1 py-0">Startup</span>
                             )}
                             {isCompanyPost && post.userId?.verificationStatus === 'verified' && (
                               <CheckCircle2 size={13} className="text-emerald-500" />
@@ -246,8 +246,8 @@ const ProfessionalFeed = () => {
                           </div>
                           <p className="text-xs text-hv-muted font-medium line-clamp-1 max-w-[200px] sm:max-w-[300px]">
                             {isCompanyPost 
-                              ? (post.userId?.companyDetails?.industry || 'Technology Partner')
-                              : (post.userId?.headline || 'Member of HireVerse')}
+                              ? (post.userId?.companyDetails?.industry || 'Startup Partner')
+                              : (post.userId?.headline || 'Builder on HireVerse')}
                           </p>
                         </div>
                       </div>
@@ -325,7 +325,7 @@ const ProfessionalFeed = () => {
                           type="text"
                           value={commentTexts[post._id] || ''}
                           onChange={e => setCommentTexts({ ...commentTexts, [post._id]: e.target.value })}
-                          placeholder="Write an encouraging comment..."
+                          placeholder="Add a thoughtful comment..."
                           className="input-field py-1.5 text-xs flex-grow"
                         />
                         <button type="submit" className="btn-secondary py-2 px-4 text-xs font-bold border-none bg-hv-violet/10 text-hv-violet hover:bg-hv-violet/15 flex items-center justify-center">
@@ -345,7 +345,7 @@ const ProfessionalFeed = () => {
           {/* People Suggestions */}
           <div className="card p-5">
             <h3 className="text-sm font-bold text-hv-text mb-4 flex items-center gap-1.5">
-              <Users size={16} className="text-hv-violet" /> Professionals
+              <Users size={16} className="text-hv-violet" /> Builders to Follow
             </h3>
             <div className="space-y-3">
               {suggestedUsers
@@ -364,7 +364,7 @@ const ProfessionalFeed = () => {
                         />
                         <div className="min-w-0">
                           <Link to={`/profile/${recUser._id}`} className="block font-bold text-hv-text truncate hover:text-hv-violet transition-colors">{recUser.name}</Link>
-                          <p className="text-[10px] text-hv-muted truncate">{recUser.headline || 'Professional'}</p>
+                           <p className="text-[10px] text-hv-muted truncate">{recUser.headline || 'Builder'}</p>
                         </div>
                       </div>
                       <motion.button
@@ -391,7 +391,7 @@ const ProfessionalFeed = () => {
           {/* Companies Suggestions */}
           <div className="card p-5">
             <h3 className="text-sm font-bold text-hv-text mb-4 flex items-center gap-1.5">
-              <Building size={16} className="text-hv-coral" /> Companies
+              <Building size={16} className="text-hv-coral" /> Active Startups
             </h3>
             <div className="space-y-3">
               {suggestedUsers
@@ -414,7 +414,7 @@ const ProfessionalFeed = () => {
                               <CheckCircle2 size={11} className="text-emerald-500 flex-shrink-0" />
                             )}
                           </div>
-                          <p className="text-[10px] text-hv-muted truncate">{company.companyDetails?.industry || 'Technology'}</p>
+                           <p className="text-[10px] text-hv-muted truncate">{company.companyDetails?.startupStage || company.companyDetails?.industry || 'Startup'}</p>
                         </div>
                       </div>
                       <motion.button

@@ -134,7 +134,7 @@ const MyApplications = () => {
         <div className="border-b border-gray-100 pb-4 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-black text-hv-text">My Applications</h1>
-            <p className="text-sm text-hv-muted mt-1 font-medium">Track your hiring progress and interview invites.</p>
+            <p className="text-sm text-hv-muted mt-1 font-medium">Track your startup opportunity pipeline and interview rounds.</p>
           </div>
           <span className="text-xs font-bold text-hv-muted bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl">
             {applications.length} submitted
@@ -152,10 +152,10 @@ const MyApplications = () => {
             <Trophy className="w-16 h-16 text-hv-subtle mx-auto animate-float" />
             <div>
               <p className="text-lg font-bold text-hv-text">No applications yet</p>
-              <p className="text-sm text-hv-muted mt-1">Start browsing verified roles to build your list.</p>
+              <p className="text-sm text-hv-muted mt-1">Start browsing startup opportunities to build your pipeline.</p>
             </div>
             <Link to="/jobs" className="btn-primary inline-flex py-2.5 text-xs">
-              Find Jobs <ChevronRight size={14} />
+              Find Opportunities <ChevronRight size={14} />
             </Link>
           </div>
         ) : (
@@ -185,7 +185,7 @@ const MyApplications = () => {
                         </h3>
                         <div className="flex items-center gap-2 text-xs text-hv-muted mt-1.5 flex-wrap font-semibold">
                           <span className="flex items-center gap-1 text-hv-violet">
-                            <Building2 size={13} /> {company.name || 'Company'}
+                            <Building2 size={13} /> {company.name || 'Startup'}
                           </span>
                           {company.verificationStatus === 'verified' && (
                             <span className="chip chip-success text-[9px] px-1.5 py-0 leading-none">Verified</span>
@@ -245,7 +245,7 @@ const MyApplications = () => {
                     ) : isHired ? (
                       <>
                         <Trophy size={14} className="text-amber-500 shrink-0" />
-                        <span className="text-emerald-700 font-bold">🎉 Congratulations! You have received a job offer for this position.</span>
+                        <span className="text-emerald-700 font-bold">🎉 Congratulations! You've received an offer from this startup!</span>
                       </>
                     ) : app.status === 'in_round' ? (
                       <>
@@ -261,7 +261,7 @@ const MyApplications = () => {
                     ) : (
                       <>
                         <Hourglass size={14} className="text-hv-subtle shrink-0" />
-                        <span className="text-hv-muted font-semibold">Under Review: The team is reviewing your application profile.</span>
+                        <span className="text-hv-muted font-semibold">Under Review: The startup's founding team is reviewing your builder profile.</span>
                       </>
                     )}
                   </div>

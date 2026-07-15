@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin, DollarSign, Briefcase, CheckCircle, Search,
-  Filter, Layers, Sparkles
+  Layers, Sparkles
 } from 'lucide-react';
 import { SkeletonJobCard } from '../components/SkeletonLoader';
 
@@ -37,7 +37,7 @@ const Jobs = () => {
         setAppliedJobIds(appliedIds);
       }
     } catch {
-      setError('Failed to retrieve job postings.');
+      setError('Failed to retrieve opportunities.');
     } finally {
       setLoading(false);
     }
@@ -71,11 +71,11 @@ const Jobs = () => {
 
         {/* Header */}
         <div className="border-b border-gray-100 pb-4">
-          <h1 className="text-3xl font-black text-hv-text">Explore Jobs</h1>
-          <p className="text-sm text-hv-muted mt-1 font-medium">{jobs.length} opportunities from registered partners.</p>
+          <h1 className="text-3xl font-black text-hv-text">Active Opportunities</h1>
+          <p className="text-sm text-hv-muted mt-1 font-medium">{jobs.length} roles open at verified startups.</p>
         </div>
 
-        {/* Search + Filters (redesigned) */}
+        {/* Search + Filters */}
         <div className="card-static p-4 flex flex-wrap gap-4 items-center">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-hv-subtle w-4 h-4" />
@@ -83,7 +83,7 @@ const Jobs = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search title, company, skills, location..."
+              placeholder="Search startup opportunities, roles, skills..."
               className="input-field pl-10"
             />
           </div>
@@ -111,12 +111,12 @@ const Jobs = () => {
               }`}
             >
               <CheckCircle size={14} className={filterVerified ? 'text-emerald-500' : 'text-gray-400'} />
-              Partner Verified
+              Startup Verified
             </button>
           </div>
         </div>
 
-        {/* Job Grid */}
+        {/* Opportunity Grid */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[...Array(4)].map((_, i) => (
@@ -127,7 +127,7 @@ const Jobs = () => {
           <div className="card p-16 text-center max-w-md mx-auto space-y-4">
             <Briefcase className="w-16 h-16 text-hv-subtle mx-auto animate-float" />
             <div>
-              <p className="text-lg font-bold text-hv-text">No jobs found</p>
+              <p className="text-lg font-bold text-hv-text">No opportunities found</p>
               <p className="text-sm text-hv-muted mt-1">Try adjusting your filters or search keywords.</p>
             </div>
             <button
@@ -150,6 +150,7 @@ const Jobs = () => {
             {filteredJobs.map((job) => {
               const hasApplied = appliedJobIds.has(job._id);
               const isVerified = job.companyId?.verificationStatus === 'verified';
+              const stage = job.companyId?.companyDetails?.startupStage || 'Startup';
               return (
                 <motion.div
                   key={job._id}
@@ -157,37 +158,38 @@ const Jobs = () => {
                     hidden: { opacity: 0, y: 16 },
                     show: { opacity: 1, y: 0 }
                   }}
-                  className="card p-6 flex flex-col justify-between cursor-pointer"
+                  className="card p-6 flex flex-col justify-between cursor-pointer hover:border-violet-200"
                   onClick={() => navigate(`/jobs/${job._id}`)}
                 >
                   <div>
                     {/* Header */}
                     <div className="flex items-start gap-4 mb-4">
                       <img
-                        src={job.companyId?.profileImage || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(job.companyId?.name || '')}`}
+                        src={job.companyId?.profileImage || `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(job.companyId?.name || '')}`}
                         alt={job.companyId?.name}
                         className="w-11 h-11 rounded-xl object-contain border border-gray-100 bg-gray-50 flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <h3 className="font-extrabold text-hv-text leading-snug group-hover:text-hv-violet transition-colors text-base line-clamp-1">{job.jobTitle}</h3>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className="text-xs text-hv-muted font-bold">{job.companyId?.name || 'Company'}</span>
+                          <span className="text-xs text-hv-muted font-bold">{job.companyId?.name || 'Startup'}</span>
                           {isVerified && (
                             <span className="chip chip-success text-[9px] px-1.5 py-0">Verified</span>
                           )}
+                          <span className="chip chip-warning text-[9px] px-1.5 py-0">{stage}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Metadata chips */}
-                    <div className="flex flex-wrap gap-2 text-xs mb-4">
+                    <div className="flex flex-wrap gap-2 text-xs mb-4 font-semibold">
                       <span className="chip chip-gray">
                         <MapPin size={11} /> {job.location}
                       </span>
                       <span className="chip chip-success font-bold">
                         <DollarSign size={11} /> {job.salary}
                       </span>
-                      <span className="chip chip-violet font-semibold">
+                      <span className="chip chip-violet">
                         <Briefcase size={11} /> {job.jobType || 'Full-time'}
                       </span>
                       {job.rounds?.length > 0 && (
@@ -198,7 +200,7 @@ const Jobs = () => {
                     </div>
 
                     {/* Description */}
-                    <p className="text-sm text-hv-muted leading-relaxed mb-4 line-clamp-2">{job.description}</p>
+                    <p className="text-sm text-hv-muted leading-relaxed mb-4 line-clamp-2 font-medium">{job.description}</p>
 
                     {/* Skills */}
                     {job.requiredSkills?.length > 0 && (
@@ -226,7 +228,7 @@ const Jobs = () => {
                         onClick={e => { e.stopPropagation(); navigate(`/jobs/${job._id}`); }}
                         className="btn-primary w-full py-2.5 text-xs"
                       >
-                        View & Apply <Sparkles size={12} />
+                        Explore & Apply <Sparkles size={12} />
                       </button>
                     )}
                   </div>

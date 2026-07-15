@@ -10,21 +10,21 @@ import {
 import { HLogo } from './AppLoader';
 
 const navItemsProfessional = [
-  { icon: Home,         label: 'Feed',         to: '/feed' },
-  { icon: Briefcase,    label: 'Jobs',          to: '/jobs' },
-  { icon: FileText,     label: 'Applications',  to: '/my-applications' },
-  { icon: Calendar,     label: 'Interviews',    to: '/interviews' },
-  { icon: Building2,    label: 'Companies',     to: '/companies' },
-  { icon: User,         label: 'Profile',       to: '/profile' },
+  { icon: Home,         label: 'Startup Feed', to: '/feed' },
+  { icon: Briefcase,    label: 'Opportunities',to: '/jobs' },
+  { icon: FileText,     label: 'Applications', to: '/my-applications' },
+  { icon: Calendar,     label: 'Interviews',   to: '/interviews' },
+  { icon: Building2,    label: 'Startups',     to: '/companies' },
+  { icon: User,         label: 'Builder Profile', to: '/profile' },
 ];
 
 const navItemsCompany = [
-  { icon: LayoutDashboard, label: 'Dashboard', to: '/dashboard' },
-  { icon: User,            label: 'Profile',   to: '/profile' },
+  { icon: LayoutDashboard, label: 'Startup Studio', to: '/dashboard' },
+  { icon: User,            label: 'Startup Profile', to: '/profile' },
 ];
 
 const navItemsAdmin = [
-  { icon: Shield, label: 'Admin', to: '/admin' },
+  { icon: Shield, label: 'Admin Studio', to: '/admin' },
   { icon: User,   label: 'Profile', to: '/profile' },
 ];
 
