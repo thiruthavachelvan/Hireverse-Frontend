@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
   FaBuilding, FaUsers, FaBriefcase, FaClipboardList,
@@ -41,6 +42,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('companies');
   const [companies, setCompanies] = useState([]);
   const [professionals, setProfessionals] = useState([]);
@@ -136,6 +138,14 @@ const AdminDashboard = () => {
           <div>
             <h1 className="text-3xl font-black text-hv-text">Admin Dashboard</h1>
             <p className="text-hv-muted text-sm mt-1">Manage and verify companies on the HireVerse platform</p>
+          </div>
+          <div className="ml-auto">
+            <button
+              onClick={() => navigate('/admin/question-bank')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-violet-600 text-white hover:bg-violet-700 transition-colors shadow-md"
+            >
+              📚 Question Bank Manager
+            </button>
           </div>
         </motion.div>
 

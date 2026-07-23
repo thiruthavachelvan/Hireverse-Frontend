@@ -25,6 +25,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import Companies from './pages/Companies';
 import CompanyDetail from './pages/CompanyDetail';
 import Notifications from './pages/Notifications';
+import AdminQuestionBank from './pages/AdminQuestionBank';
+import AssessmentEngine from './components/assessment/AssessmentEngine';
 import { Briefcase, X } from 'lucide-react';
 
 // ─── Job Alert Popup (redesigned) ───────────────────────────────
@@ -152,6 +154,11 @@ function AnimatedRoutes() {
 
         {/* Admin only */}
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><PageTransition><AdminDashboard /></PageTransition></ProtectedRoute>} />
+        <Route path="/admin/question-bank" element={<ProtectedRoute allowedRoles={['admin']}><PageTransition><AdminQuestionBank /></PageTransition></ProtectedRoute>} />
+
+        {/* Assessment Engine — dynamic workspace per round */}
+        <Route path="/assessment/engine/:jobId/:roundNumber" element={<ProtectedRoute allowedRoles={['professional']}><AssessmentEngine /></ProtectedRoute>} />
+        <Route path="/assessment/engine/view/:assessmentId" element={<ProtectedRoute allowedRoles={['professional', 'company', 'admin']}><AssessmentEngine /></ProtectedRoute>} />
 
         {/* Catch-all */}
         <Route path="*" element={<PageTransition><Landing /></PageTransition>} />

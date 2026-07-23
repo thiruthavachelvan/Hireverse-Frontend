@@ -209,12 +209,16 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    if (!formData.email || !formData.password) {
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
+
+    if (!email || !password) {
       setError('Please enter your email and password.');
       setLoading(false);
       return;
     }
-    const res = await login(formData.email, formData.password);
+
+    const res = await login(email, password);
     setLoading(false);
     if (res.success) navigate('/dashboard');
     else setError(res.message);
